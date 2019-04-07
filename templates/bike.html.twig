@@ -1,0 +1,166 @@
+{% extends "base.html.twig" %}
+
+{% block content %}
+    <div class="container" style="max-width: 100%;">
+
+        <div class="row">
+
+            <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 2em;">
+                <canvas id="batteryHistoryChart" style="display: block; width: 100%; height: 400px;"></canvas>
+                <hr/>
+                <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
+                <div id="map" style="width: 100%; height: 400px;"></div>
+            </div>
+
+            <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 2em;">
+                <div style="text-align: center; padding: 2em 0em 1em">
+                    {% include "logo.html.twig" %}
+
+                    <div class="col-lg-12 col-md-12 order-md-1 order-lg-1" style="padding-bottom: 1em;">
+                        <a href="/"><< Wróć do strony głównej</a>
+                    </div>
+                    <table style="margin: 0 auto;" class="table">
+                        <tr>
+                            <td>Kod identyfikacyjny roweru:</td>
+                            <td style="text-align: left;"><strong>{{ bike.code }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ostatni znany poziom baterii:</td>
+                            <td style="text-align: left;"><strong>{{  bike.battery  }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Miasto:</td>
+                            <td style="text-align: left;"><strong>{{ bike.lastSeenCity }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ostatnio widziany:</td>
+                            <td style="text-align: left;"><strong>{{ bike.lastSeenTimestamp|date("H:i d-m-Y") }}</strong></td>
+                        </tr>
+                    </table>
+                    <hr/>
+                </div>
+
+                <div class="col-lg-12 col-md-12">
+                    <h5>Dziennik zdarzeń (ostatnie {{ timespan }}h):</h5>
+
+                    <div class="">
+                        <table class="table">
+                            <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Typ</th>
+                                <th scope="col">Miasto</th>
+                                <th scope="col">Czas</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for event in events %}
+                                <tr class="event_{{ event.type }}">
+                                    <td>
+                                        {{ event.type|trans }}
+                                    </td>
+                                    <td>
+                                        {{ event.city|default("") }}
+                                    </td>
+                                    <td>{{ event.timestamp|date("H:i / d-m-Y") }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        wkrótce
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
+<script>
+    var batteryHistory = {{ batteryHistory|json_encode|raw }};
+
+    {#// Create the chart.js data structure using 'labels' and 'data'#}
+    var batteryHistoryChartData = {
+        labels: [],
+        datasets: [{
+            borderColor: "#EA5144",
+            fill: true,
+            data: [],
+        }]
+    };
+
+    $.each(batteryHistory, function (key, value) {
+        batteryHistoryChartData.labels.push(key);
+        batteryHistoryChartData.datasets[0].data.push(value);
+    });
+
+    new Chart(document.getElementById("batteryHistoryChart"), {
+        type: 'line',
+        data: batteryHistoryChartData,
+        options: {
+            legend: {display: false},
+            title: {
+                display: true,
+                text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
+            },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }]
+            },
+        }
+    });
+
+    var path =  new ol.geom.LineString({{ locationHistory|json_encode|raw }});
+    path.transform('EPSG:4326', 'EPSG:3857');
+
+    var pathLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            features: [new ol.Feature({
+                geometry: path,
+                name: 'Line'
+            })]
+        }),
+        style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                width: 3,
+                color: "#EA5144",
+            })
+        })
+    });
+
+    var markerLayer = new ol.layer.Vector({
+        source:new ol.source.Vector({
+            features: [new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat({{ bike.loc|json_encode|raw }})),
+            })]
+        }),
+        style: new ol.style.Style({
+            image: new ol.style.Icon({
+                anchor: [0.5, 0.5],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg"
+            })
+        })
+    });
+
+    var map = new ol.Map({
+        target: 'map',
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.OSM()
+            }),
+            pathLayer,
+            markerLayer,
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
+            zoom: 11
+        })
+    });
+
+
+</script>
+{% endblock %}

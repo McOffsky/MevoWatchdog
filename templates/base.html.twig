@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="keywords" content="Rower, mevo, trójmiasto, gdańsk, sopot, gdynia, rowery elektryczne, watchdog">
+    <title>Mevo Watchdog</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"
+            integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/emn178/chartjs-plugin-labels/src/chartjs-plugin-labels.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.css" rel="stylesheet">
+
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+    <style>
+        .scrollableTable tbody {
+            display: block;
+            overflow: auto;
+            max-height: 600px;
+        }
+
+        .scrollableTable thead, .scrollableTable tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .scrollableTable thead {
+            width: calc(100% - 1em)
+        }
+
+        .form-group select {
+            text-align: center;
+        }
+
+        .event_low_battery {
+            background: #e0d2a7;
+        }
+
+        .event_depleted_battery {
+            background: #f4a59e;
+        }
+
+        .event_new_battery {
+            background: #b4f4b0;
+        }
+    </style>
+
+{#    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>#}
+{#    <script>#}
+{#        (adsbygoogle = window.adsbygoogle || []).push({#}
+{#            google_ad_client: "ca-pub-9673975957586546",#}
+{#            enable_page_level_ads: true#}
+{#        });#}
+{#    </script>#}
+</head>
+<body>
+
+{#    <div style="width: 970px; margin: 0 auto;">#}
+{#        <script type="text/javascript">#}
+{#            google_ad_client = "ca-pub-9673975957586546";#}
+{#            google_ad_slot = "9836493541";#}
+{#            google_ad_width = 970;#}
+{#            google_ad_height = 90;#}
+{#        </script>#}
+{#        <!-- Mevo -->#}
+{#        <script type="text/javascript"#}
+{#                src="//pagead2.googlesyndication.com/pagead/show_ads.js">#}
+{#        </script>#}
+{#    </div>#}
+
+    {% block content %}
+    {% endblock %}
+
+    <div style="text-align: center; font-size: 0.7em;">
+        <i>created by <a href="mailto:mcoffsky@gmail.com">mco</a> @ 2019 </i>
+    </div>
+</body>
+</html>

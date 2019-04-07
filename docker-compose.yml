@@ -1,0 +1,55 @@
+version: '2'
+
+services:
+    # PHP CONTAINER
+    php:
+        ### DEVELOPMENT CONTAINER
+        build: ./docker/php
+
+        ### PHP CONTAINER SETTINGS
+        volumes:
+            - "./docker/php/config/php.ini:/usr/local/etc/php/conf.d/php.ini:ro"
+            - "./docker/php/config/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro"
+            - "./:/var/www:z"
+            - "./var/log/php:/var/log/php:z"
+            - "ignore_volume:/var/www/.data:z"      ###    ignore data storage path while mounting volumes
+        shm_size: 754M
+        environment:
+            - "PHP_TIMEZONE=${TIMEZONE}"
+            - "SYMFONY_SECRET=${SYMFONY_SECRET}"
+            - "APP_ENV=${SYMFONY_ENV}"
+
+    # DATABASE CONTAINER
+    database:
+        image: mariadb:10.0
+        volumes:
+            - "${DATA_DIR}/database:/var/lib/mysql:z"
+        ports:
+            - "${PORT_PREFIX}06:3306"
+        command: [mysqld, --character-set-server=utf8, --collation-server=utf8_general_ci]
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${DATABASE_NAME}
+            MYSQL_USER: ${DATABASE_USER}
+            MYSQL_PASSWORD: ${DATABASE_PASS}
+
+    # NGINX CONTAINER
+    engine:
+        image: nginx:stable-alpine
+        volumes:
+            - "./docker/nginx/config/server.conf:/etc/nginx/conf.d/default.conf:ro"
+            - "./docker/nginx/config/ez_params.d:/etc/nginx/ez_params.d:ro"
+            - "./var/log/nginx:/var/log/nginx:z"
+        volumes_from:
+            - php
+        depends_on:
+            - php
+        ports:
+            - "${PORT_PREFIX}80:80"
+
+### DEV SETTINGS ###
+
+# Fake data volume for ignoring database/storage/solr and other files
+volumes:
+    ignore_volume:
+        external: false

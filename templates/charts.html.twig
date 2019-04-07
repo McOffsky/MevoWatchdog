@@ -1,0 +1,285 @@
+{% extends "base.html.twig" %}
+
+{% block content %}
+    <div class="container" style="max-width: 100%;">
+        <div class="row">
+
+            <div class="col-lg-6 col-md-12 order-md-2 order-lg-1" style="padding-top: 2em;">
+                <canvas id="availableSummaryChart" style="display: block; width: 100%; height: 300px;"></canvas>
+                <hr/>
+                <canvas id="activeSummaryChart" style="display: block; width: 100%; height: 300px;"></canvas>
+                <hr/>
+                <canvas id="inactiveSummaryChart" style="display: block; width: 100%; height: 300px;"></canvas>
+            </div>
+
+            <div class="col-lg-6 col-md-12 order-md-1 order-lg-2" style="padding-bottom: 2em;">
+                <div style="text-align: center; padding: 2em 0em 1em">
+                    {% include "logo.html.twig" %}
+                    <i>Aktualny czas: <strong>{{ "now"|date("H:i d-m-Y") }}</strong>,
+                        miasto: {{ city|default("Wszystkie") }}</i>
+                    <form method="GET">
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+
+                            <div class="col-md-3">
+                                <select name="city" class="form-control" onchange="this.form.submit()">
+                                    <option value="">--Wybierz miasto--</option>
+                                    {% for val in knownCities %}
+                                        <option {% if city == val %}selected{% endif %}
+                                                value="{{ val }}">{{ val }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="hours" class="form-control" onchange="this.form.submit()">
+                                    {% for val in [3,6,12,24,48] %}
+                                        <option {% if timespan == val %}selected{% endif %} value="{{ val }}">{{ val }}
+                                            h
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3"></div>
+                        </div>
+                    </form>
+                    <table style="margin: 0 auto;" class="table">
+                        <tr>
+                            <td>Liczba dostępnych rowerów (ostatnie 2h):</td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ countAvailable2h }}</strong></td>
+                        </tr>
+                        {% if city is empty %}
+                            <tr>
+                                <td>Deklarowana liczba dostępnych rowerów:</td>
+                                <td style="width: 25%; text-align: left;"><strong>{{ bikeDeclaration }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Stopień dostępności systemu (ostatnie 2h):</td>
+                                <td style="width: 25%; text-align: left;">
+                                    <strong>{{ (countAvailable2h*100/bikeDeclaration)|round(1, 'floor') }}%</strong>
+                                </td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td>Liczba baterii do wymiany z {{ timespan }}h (bateria < 30%):</td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ lowBatteryCount }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Liczba rozładowanych rowerów z {{ timespan }}h (bateria < 20%):</td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ depletedBatteryCount }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Liczba wymienionych baterii w ciągu ostatnich {{ timespan }}h:</td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ replacedBatteryCount }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Liczba rowerów zapisanych w bazie Mevo Watchdog:</td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ knownBikesCount }}</strong></td>
+                        </tr>
+                    </table>
+                    <hr/>
+                </div>
+                <canvas id="batterySummaryChart" style="display: block; width: 100%; height: 400px;"></canvas>
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <div class="col-lg-12 col-md-12">
+                <h5>Dziennik zdarzeń (ostatnie 2h):</h5>
+
+                <div class="scrollableTable">
+                    <table class="table">
+                        <thead class="thead-light">
+                        <tr>
+                            <th scope="col" style="width: 15%;">Rower</th>
+                            <th scope="col">Typ</th>
+                            <th scope="col">Miasto</th>
+                            <th scope="col" style="width: 20%;">Czas</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for event in events2h %}
+                            <tr class="event_{{ event.type }}">
+                                <td style="width: 15%;"><a
+                                            href="{{ path("bike_view", {code: event.bikeCode}) }}">{{ event.bikeCode }}</a>
+                                </td>
+                                <td>
+                                    {{ event.type|trans }}
+                                </td>
+                                <td>
+                                    {{ event.city|default("") }}
+                                </td>
+                                <td style="width: 20%;">{{ event.timestamp|date("H:i / d-m-Y") }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var inactiveSummary = {{ lastSeenActive|json_encode|raw }};
+        var activeSummary = {{ activeSummary|json_encode|raw }};
+        var availableSummary = {{ availableSummary|json_encode|raw }};
+        var batterySummary = {{ batteryStatus|json_encode|raw }};
+
+        // Create the chart.js data structure using 'labels' and 'data'
+        var inactiveSummaryChartData = {
+            labels: [],
+            datasets: [{
+                backgroundColor: "#EA5144",
+                data: []
+            }]
+        };
+
+        var activeSummaryChartData = {
+            labels: [],
+            datasets: [{
+                backgroundColor: "#EA5144",
+                data: []
+            }]
+        };
+
+
+        var availableSummaryChartData = {
+            labels: [],
+            datasets: [{
+                backgroundColor: "#EA5144",
+                data: []
+            }]
+        };
+
+        var batterySummaryChartData = {
+            labels: [],
+            datasets: [{
+                backgroundColor: ['#00ff6c', '#6eea66', '#94d560', '#afc05a', '#c3a954', '#d3904e', '#df7549', '#ea5144', '#ff0000', '#ff0000'],
+                data: []
+            }]
+        };
+
+        $.each(inactiveSummary, function (key, value) {
+            inactiveSummaryChartData.labels.push(key);
+            inactiveSummaryChartData.datasets[0].data.push(value);
+        });
+
+        $.each(activeSummary, function (key, value) {
+            activeSummaryChartData.labels.push(key);
+            activeSummaryChartData.datasets[0].data.push(value);
+        });
+
+        $.each(batterySummary, function (key, value) {
+            batterySummaryChartData.labels.push(key + " (" + value + ")");
+            batterySummaryChartData.datasets[0].data.push(value);
+        });
+
+        $.each(availableSummary, function (key, value) {
+            availableSummaryChartData.labels.push(key);
+            availableSummaryChartData.datasets[0].data.push(value);
+        });
+
+
+        new Chart(document.getElementById("inactiveSummaryChart"), {
+            type: 'bar',
+            data: inactiveSummaryChartData,
+            options: {
+                legend: {display: false},
+                title: {
+                    display: true,
+                    text: 'Jak długo rowery pozostają niedostępne w ciągu ostatnich {{ timespan }} godzin? (serwisowane, rozładowane lub zajęte)'
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            max: {{ bikeDeclaration }}
+                        }
+                    }]
+                },
+                plugins: {
+                    labels: {
+                        render: 'value',
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("availableSummaryChart"), {
+            type: 'bar',
+            data: availableSummaryChartData,
+            options: {
+                legend: {display: false},
+                showDatapoints: true,
+                title: {
+                    display: true,
+                    text: 'Liczba rowerów dostępnych do wypożyczenia (bateria > 20%) w ciągu {{ timespan }} godzin'
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            max: {{ bikeDeclaration }}
+                        }
+                    }]
+                },
+                plugins: {
+                    labels: {
+                        render: 'value',
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("activeSummaryChart"), {
+            type: 'bar',
+            data: activeSummaryChartData,
+            options: {
+                legend: {display: false},
+                showDatapoints: true,
+                title: {
+                    display: true,
+                    text: 'Liczba rowerów widocznych w systemie w ciągu ostatnich {{ timespan }} godzin'
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            max: {{ bikeDeclaration }}
+                        }
+                    }]
+                },
+                plugins: {
+                    labels: {
+                        render: 'value',
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("batterySummaryChart"), {
+            type: 'doughnut',
+            data: batterySummaryChartData,
+            options: {
+                title: {
+                    display: true,
+                    text: 'Ostatni zalogowany status baterii rowerów aktywnych w ciągu ostatnich {{ timespan }} godzin'
+                },
+                plugins: {
+                    labels: {
+                        render: 'value',
+                        textShadow: true,
+                        fontColor: '#000',
+                        shadowBlur: 5,
+                        shadowOffsetX: 0,
+                        shadowOffsetY: 0,
+                        shadowColor: '#fff',
+                        showZero: false,
+                    }
+                }
+            }
+        });
+    </script>
+{% endblock %}

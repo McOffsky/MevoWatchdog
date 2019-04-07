@@ -1,0 +1,9 @@
+/vendor/
+/build/
+.php_cs.cache
+.data
+.env
+.idea
+.vagrant
+/var/*
+public_html/bundles/*
