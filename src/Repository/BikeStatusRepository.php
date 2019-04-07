@@ -2,9 +2,11 @@
 
 namespace App\Repository;
 
-use App\Entity\Bike;
 use App\Entity\BikeStatus;
+use DateTime;
+use DateTimeZone;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Exception;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class BikeStatusRepository extends ServiceEntityRepository
@@ -18,13 +20,19 @@ class BikeStatusRepository extends ServiceEntityRepository
 
     /**
      * Get current DateTime
+     * @param $time
+     * @return int|null
      */
     private function getTime($time)
     {
-        $now = new \DateTime($time);
-        $now->setTimezone(new \DateTimeZone('UTC'));
+        try {
+            $now = new DateTime($time);
+            $now->setTimezone(new DateTimeZone('UTC'));
+            return $now->getTimestamp();
+        } catch (Exception $e) {
+        }
 
-        return $now->getTimestamp();
+        return null;
     }
 
     /**
@@ -39,7 +47,6 @@ class BikeStatusRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('bs')
             ->where('bs.timestamp >= :from')
             ->setParameter('from', $from)
-            ->setMaxResults(10000)
             ->andWhere('bs.bikeCode = :code')
             ->setParameter('code', $code)
         ;
@@ -72,15 +79,25 @@ class BikeStatusRepository extends ServiceEntityRepository
      */
     public function getBikeLocationHistory($code, $timespan)
     {
-        $summary = [];
+        $statusQB = $this->createQueryBuilder('bs')
+            ->groupBy("bs.location")
+            ->andWhere('bs.timestamp > :from')
+            ->andWhere('bs.timestamp < :to')
+            ->setParameter('from', $this->getTime("-".$timespan."hours"))
+            ->setParameter('to', $this->getTime("now"))
+            ->andWhere('bs.bikeCode = :code')
+            ->setParameter('code', $code)
+            ->addOrderBy("bs.timestamp", "DESC")
+        ;
+
+        $locations = [];
 
         /** @var BikeStatus $status */
-        foreach($this->getBikeStatusList($code, $timespan) as $status) {
-
-            $summary[$status->getLocation()] = $status->getLoc();
+        foreach($statusQB->getQuery()->getResult() as $status) {
+            $locations[] = $status->getLoc();
         }
 
-        return array_values($summary);
+        return $locations;
     }
 
     /**
@@ -130,6 +147,83 @@ class BikeStatusRepository extends ServiceEntityRepository
         return $qb
             ->getQuery()
             ->getResult();
+    }
+    /**
+     * @param int $timespan
+     * @param null $code
+     * @param string $city
+     * @return array
+     */
+    public function getLocationChangeTimespanCount($timespan, $code = null, $city = null)
+    {
+        return $this->getLocationChangeCount("-".$timespan."hours", "now", $code, $city);
+    }
+
+    public function getLocationChangeSummary($days = 7, $city = null)
+    {
+        $summary = [];
+
+        for ($i = 0; $i < $days; $i++) {
+            $weekday = new DateTime("-".$i."days");
+            $from = $weekday->format("00:00:00 d-m-Y");
+            $to = $weekday->format("23:59:59 d-m-Y");
+
+            $summary[$weekday->format("d-m-Y")] = $this->getLocationChangeCount($from, $to, null, $city);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param string $form
+     * @param string $to
+     * @param string $code
+     * @param string $city
+     * @return array
+     */
+    public function getLocationChangeCount($form, $to, $code = null, $city = null)
+    {
+        $statusQB = $this->createQueryBuilder('bs')
+            ->groupBy("bs.bikeCode,bs.location")
+            ->andWhere('bs.timestamp > :from')
+            ->andWhere('bs.timestamp < :to')
+            ->setParameter('from', $this->getTime($form))
+            ->setParameter('to', $this->getTime($to))
+        ;
+
+        if (!empty($city)) {
+            $statusQB->andWhere('bs.city = :city')
+                ->setParameter('city', $city);
+        }
+
+        if (!empty($code)) {
+            $statusQB->andWhere('bs.bikeCode = :code')
+                ->setParameter('code', $code);
+        }
+
+        $locations = $statusQB->getQuery()->getResult();
+
+        $bikesQB = $this->createQueryBuilder('bs')
+            ->groupBy("bs.bikeCode")
+            ->andWhere('bs.timestamp > :from')
+            ->andWhere('bs.timestamp < :to')
+            ->setParameter('from', $this->getTime($form))
+            ->setParameter('to', $this->getTime($to))
+        ;
+
+        if (!empty($city)) {
+            $bikesQB->andWhere('bs.city = :city')
+                ->setParameter('city', $city);
+        }
+
+        if (!empty($code)) {
+            $bikesQB->andWhere('bs.bikeCode = :code')
+                ->setParameter('code', $code);
+        }
+
+        $bikes = $bikesQB->getQuery()->getResult();
+
+        return count($locations) - count($bikes);
     }
 
     /**

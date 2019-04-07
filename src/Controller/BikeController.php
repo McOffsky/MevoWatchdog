@@ -35,6 +35,7 @@ class BikeController extends AbstractController
             'events' => $eventRepo->getBikeEvents($code, $timespan),
             'batteryHistory' => $statusRepo->getBikeBatteryHistory($code, $timespan),
             'locationHistory' => $statusRepo->getBikeLocationHistory($code, $timespan),
+            "locationChangeCount" => $statusRepo->getLocationChangeTimespanCount($timespan, $code),
             "timespan" => $timespan,
         ];
 

@@ -29,7 +29,6 @@ class BikeRepository extends ServiceEntityRepository
         try {
             $now = new DateTime($time);
             $now->setTimezone(new DateTimeZone('UTC'));
-
             return $now->getTimestamp();
         } catch (Exception $e) {
         }
@@ -104,7 +103,7 @@ class BikeRepository extends ServiceEntityRepository
             ->setParameter('from', $fromDatetime)
             ->setParameter('to', $toDatetime)
             ->orderBy('b.battery', 'DESC')
-            ->setMaxResults(10000);
+            ;
 
         if (!empty($city)) {
             $qb->andWhere('b.lastSeenCity = :city')
@@ -128,7 +127,7 @@ class BikeRepository extends ServiceEntityRepository
             ->andWhere('b.battery > :cutoff')
             ->setParameter('from', $fromDatetime)
             ->setParameter('cutoff', self::BATTERY_CUTOFF_LEVEL)
-            ->setMaxResults(10000);
+            ;
 
         if (!empty($city)) {
             $qb->andWhere('b.lastSeenCity = :city')

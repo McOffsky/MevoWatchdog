@@ -5,6 +5,9 @@ namespace App\Repository;
 use App\Entity\BikeEvent;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Symfony\Bridge\Doctrine\RegistryInterface;
+use DateTime;
+use DateTimeZone;
+use Exception;
 
 /**
  * @method BikeEvent|null find($id, $lockMode = null, $lockVersion = null)
@@ -21,13 +24,19 @@ class BikeEventRepository extends ServiceEntityRepository
 
     /**
      * Get current DateTime
+     * @param $time
+     * @return int|null
      */
     private function getTime($time)
     {
-        $now = new \DateTime($time);
-        $now->setTimezone(new \DateTimeZone('UTC'));
+        try {
+            $now = new DateTime($time);
+            $now->setTimezone(new DateTimeZone('UTC'));
+            return $now->getTimestamp();
+        } catch (Exception $e) {
+        }
 
-        return $now->getTimestamp();
+        return null;
     }
 
     /**
@@ -42,11 +51,10 @@ class BikeEventRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('be')
             ->where('be.timestamp >= :from')
             ->setParameter('from', $from)
-            ->setMaxResults(10000)
             ->andWhere('be.bikeCode = :code')
             ->setParameter('code', $code)
             ->orderBy('be.id', 'DESC')
-        ;
+            ;
 
         return $qb->getQuery()->getResult();
     }
@@ -64,7 +72,7 @@ class BikeEventRepository extends ServiceEntityRepository
             ->where('be.timestamp >= :from')
             ->setParameter('from', $from)
             ->orderBy('be.timestamp', 'DESC')
-            ->setMaxResults(10000);
+            ;
 
         if (!empty($city)) {
             $qb->andWhere('be.city = :city')
@@ -89,7 +97,7 @@ class BikeEventRepository extends ServiceEntityRepository
             ->setParameter('from', $from)
             ->andWhere('be.type = :type')
             ->setParameter('type', $type)
-            ->setMaxResults(10000);
+            ;
 
         if (!empty($city)) {
             $qb->andWhere('be.city = :city')

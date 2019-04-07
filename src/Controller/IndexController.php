@@ -37,6 +37,8 @@ class IndexController extends AbstractController
             "lastSeenActive" => $bikeRepo->getLastSeenActive($timespan, $city),
             "countAvailable2h" => $bikeRepo->getActiveCount(2, $city),
             "batteryStatus" => $bikeRepo->getBatteryStatus($timespan, $city),
+            "locationChangeCount" => $statusRepo->getLocationChangeTimespanCount($timespan, null, $city),
+            "locationChangeSummary" => $statusRepo->getLocationChangeSummary(7, $city),
 
             "lowBatteryCount" => $eventRepo->countByType(BikeEvent::LOW_BATTERY, $timespan, $city),
             "depletedBatteryCount" => $eventRepo->countByType(BikeEvent::DEPLETED_BATTERY, $timespan, $city),

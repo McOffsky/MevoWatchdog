@@ -36,6 +36,11 @@
                             <td>Ostatnio widziany:</td>
                             <td style="text-align: left;"><strong>{{ bike.lastSeenTimestamp|date("H:i d-m-Y") }}</strong></td>
                         </tr>
+                        <tr>
+                            <td>Liczba zmian lokacji roweru z ostatnich {{ timespan }}h: <br/>
+                                <i>(wypożyczenie lub przestawienie przez serwis)</i></td>
+                            <td style="width: 25%; text-align: left;"><strong>{{ locationChangeCount }}</strong></td>
+                        </tr>
                     </table>
                     <hr/>
                 </div>
