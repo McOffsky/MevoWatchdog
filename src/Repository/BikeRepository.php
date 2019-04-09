@@ -55,12 +55,12 @@ class BikeRepository extends ServiceEntityRepository
 
     /**
      * @param string $city
-     * @return Bike[]
+     * @return integer
      */
     public function getKnownBikesCount($city = null)
     {
         $qb = $this->createQueryBuilder('b')
-            ->select("COUNT(b.id)")
+            ->select("COUNT(DISTINCT b.id)")
             ->orderBy('b.battery', 'DESC');
 
         if (!empty($city)) {
@@ -68,13 +68,7 @@ class BikeRepository extends ServiceEntityRepository
                 ->setParameter('city', $city);
         }
 
-        $result = $qb->getQuery()->getResult();
-
-        if(!empty($result[0]) && !empty($result[0][1])) {
-            return $result[0][1];
-        }
-
-        return 0;
+        return $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -114,15 +108,44 @@ class BikeRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param $from
+     * @param string $to
+     * @param string $city
+     * @return integer
+     */
+    private function countByActivity($from, $to = "now", $city = null)
+    {
+        $fromDatetime = $this->getTime($from);
+        $toDatetime = $this->getTime($to);
+
+        $qb = $this->createQueryBuilder('b')
+            ->select("COUNT(DISTINCT b.id)")
+            ->where('b.lastSeenTimestamp > :from')
+            ->andWhere('b.lastSeenTimestamp < :to')
+            ->setParameter('from', $fromDatetime)
+            ->setParameter('to', $toDatetime)
+            ->orderBy('b.battery', 'DESC')
+        ;
+
+        if (!empty($city)) {
+            $qb->andWhere('b.lastSeenCity = :city')
+                ->setParameter('city', $city);
+        }
+
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * @param int $timespan
      * @param string $city
-     * @return int
+     * @return integer
      */
     public function getActiveCount($timespan = 2, $city = null)
     {
         $fromDatetime = $this->getTime("-".$timespan." hours");
 
         $qb = $this->createQueryBuilder('b')
+            ->select("COUNT(DISTINCT b.id)")
             ->where('b.lastSeenTimestamp > :from')
             ->andWhere('b.battery > :cutoff')
             ->setParameter('from', $fromDatetime)
@@ -134,7 +157,7 @@ class BikeRepository extends ServiceEntityRepository
                 ->setParameter('city', $city);
         }
 
-        return count($qb->getQuery()->getResult());
+        return $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -145,13 +168,13 @@ class BikeRepository extends ServiceEntityRepository
     public function getLastSeenActive($timespan = 12, $city = null)
     {
         $summary = [];
-        $summary["Mniej niż 1h"] = count($this->findByActivity("-1hour", "now", $city));
+        $summary["Mniej niż 1h"] = $this->countByActivity("-1hour", "now", $city);
 
         for($i = 2; $i <= $timespan; $i++) {
-            $summary[($i-1)."h - ".$i."h"] = count($this->findByActivity("-".$i."hours", "-".($i-1)."hours", $city));
+            $summary[($i-1)."h - ".$i."h"] = $this->countByActivity("-".$i."hours", "-".($i-1)."hours", $city);
         }
 
-        $summary["Więcej niż ".($i-1)."h"] = count($this->findByActivity("-1week", "-".$i."hours", $city));
+        $summary["Więcej niż ".($i-1)."h"] = $this->countByActivity("-1week", "-".$i."hours", $city);
 
         return $summary;
     }

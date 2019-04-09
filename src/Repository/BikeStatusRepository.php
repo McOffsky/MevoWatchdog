@@ -65,8 +65,11 @@ class BikeStatusRepository extends ServiceEntityRepository
 
         /** @var BikeStatus $status */
         foreach($this->getBikeStatusList($code, $timespan) as $status) {
-            $time = date('H:i / d-m-Y',$status->getTimestamp());
-            $summary[$time] = $status->getBattery();
+            $summary[] = [
+                "time" => date('H:i / d-m-Y',$status->getTimestamp()),
+                "battery" => $status->getBattery(),
+                "locationChange" => $status->getLocationChange()
+            ];
         }
 
         return $summary;
@@ -80,20 +83,31 @@ class BikeStatusRepository extends ServiceEntityRepository
     public function getBikeLocationHistory($code, $timespan)
     {
         $statusQB = $this->createQueryBuilder('bs')
-            ->groupBy("bs.location")
+            ->andWhere('bs.locationChange = :true')
             ->andWhere('bs.timestamp > :from')
             ->andWhere('bs.timestamp < :to')
+            ->andWhere('bs.bikeCode = :code')
             ->setParameter('from', $this->getTime("-".$timespan."hours"))
             ->setParameter('to', $this->getTime("now"))
-            ->andWhere('bs.bikeCode = :code')
             ->setParameter('code', $code)
+            ->setParameter('true', true)
             ->addOrderBy("bs.timestamp", "DESC")
         ;
 
         $locations = [];
 
-        /** @var BikeStatus $status */
-        foreach($statusQB->getQuery()->getResult() as $status) {
+        $result = $statusQB->getQuery()->getResult();
+
+//        /** @var BikeStatus $status */
+//        foreach($result as $status) {
+//            $locations[] = [
+//                "time" => date('H:i / d-m-Y', $status->getTimestamp()),
+//                "battery" => $status->getBattery(),
+//                "loc" => $status->getLoc(),
+//            ];
+//        }
+
+        foreach($result as $status) {
             $locations[] = $status->getLoc();
         }
 
@@ -122,14 +136,12 @@ class BikeStatusRepository extends ServiceEntityRepository
      * @param string $to
      * @param string $city
      * @param int $batteryCutoff
-     * @return mixed
+     * @return integer
      */
-    private function getActive($from="-1 hour", $to = "now", $city = null, $batteryCutoff = 0)
+    private function getActiveCount($from="-1 hour", $to = "now", $city = null, $batteryCutoff = 0)
     {
         $qb = $this->createQueryBuilder('bs')
-            ->select('b')
-            ->distinct('b.code')
-            ->leftJoin('App:Bike', 'b', 'WITH', 'bs.bikeCode = b.code')
+            ->select("COUNT(DISTINCT bs.bikeCode)")
             ->where("bs.battery >= :battery")
             ->setParameter("battery", $batteryCutoff)
 
@@ -146,8 +158,9 @@ class BikeStatusRepository extends ServiceEntityRepository
 
         return $qb
             ->getQuery()
-            ->getResult();
+            ->getSingleScalarResult();
     }
+
     /**
      * @param int $timespan
      * @param null $code
@@ -184,11 +197,13 @@ class BikeStatusRepository extends ServiceEntityRepository
     public function getLocationChangeCount($form, $to, $code = null, $city = null)
     {
         $statusQB = $this->createQueryBuilder('bs')
-            ->groupBy("bs.bikeCode,bs.location")
+            ->select('COUNT(bs.id)')
+            ->andWhere('bs.locationChange = :true')
             ->andWhere('bs.timestamp > :from')
             ->andWhere('bs.timestamp < :to')
             ->setParameter('from', $this->getTime($form))
             ->setParameter('to', $this->getTime($to))
+            ->setParameter('true', true)
         ;
 
         if (!empty($city)) {
@@ -201,29 +216,7 @@ class BikeStatusRepository extends ServiceEntityRepository
                 ->setParameter('code', $code);
         }
 
-        $locations = $statusQB->getQuery()->getResult();
-
-        $bikesQB = $this->createQueryBuilder('bs')
-            ->groupBy("bs.bikeCode")
-            ->andWhere('bs.timestamp > :from')
-            ->andWhere('bs.timestamp < :to')
-            ->setParameter('from', $this->getTime($form))
-            ->setParameter('to', $this->getTime($to))
-        ;
-
-        if (!empty($city)) {
-            $bikesQB->andWhere('bs.city = :city')
-                ->setParameter('city', $city);
-        }
-
-        if (!empty($code)) {
-            $bikesQB->andWhere('bs.bikeCode = :code')
-                ->setParameter('code', $code);
-        }
-
-        $bikes = $bikesQB->getQuery()->getResult();
-
-        return count($locations) - count($bikes);
+        return $statusQB->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -235,10 +228,10 @@ class BikeStatusRepository extends ServiceEntityRepository
     {
         $summary = [];
 
-        $summary["Do 1h"] = count($this->getActive("-1hour", "now", $city));
+        $summary["Do 1h"] = $this->getActiveCount("-1hour", "now", $city);
 
         for($i = 2; $i <= $timespan; $i++) {
-            $summary[($i-1)."h - ".$i."h"] = count($this->getActive("-".$i."hours", "-".($i-1)."hours", $city));
+            $summary[($i-1)."h - ".$i."h"] = $this->getActiveCount("-".$i."hours", "-".($i-1)."hours", $city);
         }
 
         return $summary;
@@ -253,12 +246,11 @@ class BikeStatusRepository extends ServiceEntityRepository
     {
         $summary = [];
 
-        $summary["Do 1h"] = count($this->getActive("-1hour", "now", $city, self::BATTERY_CUTOFF_LEVEL));
+        $summary["Do 1h"] = $this->getActiveCount("-1hour", "now", $city, self::BATTERY_CUTOFF_LEVEL);
 
         for($i = 2; $i <= $timespan; $i++) {
-            $summary[($i-1)."h - ".$i."h"] = count($this->getActive("-".$i."hours", "-".($i-1)."hours", $city, self::BATTERY_CUTOFF_LEVEL));
+            $summary[($i-1)."h - ".$i."h"] = $this->getActiveCount("-".$i."hours", "-".($i-1)."hours", $city, self::BATTERY_CUTOFF_LEVEL);
         }
-
 
         return $summary;
     }

@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\BikeStatusRepository")
- * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"bikeCode"}), @ORM\Index(name="timestamp_idx", columns={"timestamp"}), @ORM\Index(name="city_idx", columns={"city"})})
+ * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"bikeCode"}), @ORM\Index(name="timestamp_idx", columns={"timestamp"}), @ORM\Index(name="city_idx", columns={"city"}), @ORM\Index(name="locationChange_idx", columns={"locationChange"})})
  */
 class BikeStatus
 {
@@ -41,6 +41,11 @@ class BikeStatus
      * @ORM\Column(type="string", length=30)
      */
     private $city;
+
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $locationChange;
 
     public function getId(): ?int
     {
@@ -136,5 +141,17 @@ class BikeStatus
         $data = explode("|", $this->location);
 
         return [floatval($data[1]), floatval($data[0])];
+    }
+
+    public function getLocationChange(): ?bool
+    {
+        return $this->locationChange;
+    }
+
+    public function setLocationChange(?bool $locationChange): self
+    {
+        $this->locationChange = $locationChange;
+
+        return $this;
     }
 }

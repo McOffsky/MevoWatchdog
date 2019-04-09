@@ -7,6 +7,7 @@
 
             <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 2em;">
                 <canvas id="batteryHistoryChart" style="display: block; width: 100%; height: 400px;"></canvas>
+                <div class="text-center"><i><small>Linie przerywane oznaczają logowanie w nowej lokalizacji.</small></i></div>
                 <hr/>
                 <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
                 <div id="map" style="width: 100%; height: 400px;"></div>
@@ -75,46 +76,77 @@
                 </div>
             </div>
         </div>
-        wkrótce
     </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
 <script>
+
+    let timeFormat = "HH:mm / DD-MM-YYYY";
+
     var batteryHistory = {{ batteryHistory|json_encode|raw }};
 
-    {#// Create the chart.js data structure using 'labels' and 'data'#}
+    // Create the chart.js data structure using 'labels' and 'data'
     var batteryHistoryChartData = {
         labels: [],
         datasets: [{
+            lineTension: 0,
             borderColor: "#EA5144",
             fill: true,
             data: [],
         }]
     };
 
+    var batteryHistoryLocationChange = [];
+
     $.each(batteryHistory, function (key, value) {
-        batteryHistoryChartData.labels.push(key);
-        batteryHistoryChartData.datasets[0].data.push(value);
+        batteryHistoryChartData.labels.push(value.time);
+        batteryHistoryChartData.datasets[0].data.push({x:value.time, y:value.battery});
+
+        if (value.locationChange) {
+            batteryHistoryLocationChange.push({
+                type: 'line',
+                mode: 'vertical',
+                scaleID: 'x-axis-0',
+                value: moment(value.time, timeFormat).toDate(),
+                borderColor: '#888',
+                borderWidth: 1,
+                borderDash: [5, 2]
+            });
+        }
     });
 
-    new Chart(document.getElementById("batteryHistoryChart"), {
+    let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
         type: 'line',
         data: batteryHistoryChartData,
         options: {
-            legend: {display: false},
             title: {
                 display: true,
                 text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
             },
+            legend: {
+                display: false,
+            },
+            bezierCurve: false,
             scales: {
                 yAxes: [{
                     ticks: {
                         beginAtZero: true,
                         max: 100
                     }
-                }]
+                }],
+                xAxes: [{
+                    type:       "time",
+                    time:       {
+                        format: timeFormat,
+                        displayFormats: { month: 'MM',  day: 'DD', hour: "H:00" },
+                    }
+                }],
             },
-        }
+            annotation: {
+                drawTime: 'beforeDatasetsDraw',
+                annotations: batteryHistoryLocationChange
+            }
+        },
     });
 
     var path =  new ol.geom.LineString({{ locationHistory|json_encode|raw }});

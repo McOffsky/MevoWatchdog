@@ -50,8 +50,8 @@ class BikeEventRepository extends ServiceEntityRepository
 
         $qb = $this->createQueryBuilder('be')
             ->where('be.timestamp >= :from')
-            ->setParameter('from', $from)
             ->andWhere('be.bikeCode = :code')
+            ->setParameter('from', $from)
             ->setParameter('code', $code)
             ->orderBy('be.id', 'DESC')
             ;
@@ -93,6 +93,7 @@ class BikeEventRepository extends ServiceEntityRepository
         $from = $this->getTime("-".$timespan." hours");
 
         $qb = $this->createQueryBuilder('be')
+            ->select("COUNT(DISTINCT be.id)")
             ->where('be.timestamp >= :from')
             ->setParameter('from', $from)
             ->andWhere('be.type = :type')
@@ -104,6 +105,6 @@ class BikeEventRepository extends ServiceEntityRepository
                 ->setParameter('city', $city);
         }
 
-        return count($qb->getQuery()->getResult());
+        return $qb->getQuery()->getSingleScalarResult();
     }
 }

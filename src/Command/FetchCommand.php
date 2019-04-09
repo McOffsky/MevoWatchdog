@@ -11,9 +11,15 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\ORMException;
+use DateTimeZone;
+use DateTime;
+use Exception;
 
 class FetchCommand extends Command
 {
+    const LOCATION_CHANGE_TRESHOLD = 20; //m
+
     protected static $defaultName = 'mevo:fetch';
 
     /**
@@ -42,12 +48,12 @@ class FetchCommand extends Command
     /**
      * Get current DateTime
      *
-     * @throws \Exception
+     * @throws Exception
      */
     private function getNow()
     {
-        $now = new \DateTime();
-        $now->setTimezone(new \DateTimeZone('UTC'));
+        $now = new DateTime();
+        $now->setTimezone(new DateTimeZone('UTC'));
 
         return $now;
     }
@@ -55,7 +61,7 @@ class FetchCommand extends Command
     /**
      * Get age limit for status log
      *
-     * @throws \Exception
+     * @throws Exception
      */
     private function getStatusAgeLimit()
     {
@@ -69,13 +75,13 @@ class FetchCommand extends Command
      *
      * @param Bike $bike
      * @param BikeRawStatus $status
-     * @throws \Doctrine\ORM\ORMException
+     * @throws ORMException
      */
     private function readEvents(Bike $bike, BikeRawStatus $status)
     {
         $now = $this->getNow();
 
-        if ($bike->getBattery() <= 30 && $bike->getBattery() > 0 && $status->getBattery() > 85) {
+        if ($bike->getBattery() <= 60 && $bike->getBattery() > 0 && $status->getBattery() > 85) {
             $bikeReloadedEvent = new BikeEvent();
             $bikeReloadedEvent->setType(BikeEvent::NEW_BATTERY);
             $bikeReloadedEvent->setTimestamp($now->getTimestamp());
@@ -114,7 +120,7 @@ class FetchCommand extends Command
      */
     private function readStatus(Bike $bike, BikeRawStatus $status)
     {
-        /** @var BikeStatus $statusRepo */
+        /** @var BikeStatus $lastStatus */
         $lastStatus = $this->em->getRepository(BikeStatus::class)->findLastStatusForBike($bike->getCode());
         $now = $this->getNow();
 
@@ -131,8 +137,44 @@ class FetchCommand extends Command
             $bikeStatus->setTimestamp($now->getTimestamp());
             $bikeStatus->setLocation($status->getLocation());
             $bikeStatus->setCity($status->getCity());
+
+            if (!empty($lastStatus)) {
+                if ($status->getLocation() != $lastStatus->getLocation()
+                 && $this->calcuateDistance($lastStatus->getLocation(), $status->getLocation()) > self::LOCATION_CHANGE_TRESHOLD
+                ) {
+                    $bikeStatus->setLocationChange(true);
+                }
+            }
+
             $this->em->persist($bikeStatus);
         }
+    }
+
+    /**
+     * @param string $from
+     * @param string $to
+     * @param int $earthRadius (default value correct for lat 54')
+     * @return float|int
+     */
+    private function calcuateDistance($from, $to, $earthRadius = 6364181)
+    {
+        $from = explode("|", $from);
+        $to = explode("|", $to);
+
+        // convert from degrees to radians
+        $latFrom = deg2rad(floatval($from[0]));
+        $lonFrom = deg2rad(floatval($from[1]));
+        $latTo = deg2rad(floatval($to[0]));
+        $lonTo = deg2rad(floatval($to[1]));
+
+        $lonDelta = $lonTo - $lonFrom;
+        $a = pow(cos($latTo) * sin($lonDelta), 2) +
+            pow(cos($latFrom) * sin($latTo) - sin($latFrom) * cos($latTo) * cos($lonDelta), 2);
+        $b = sin($latFrom) * sin($latTo) + cos($latFrom) * cos($latTo) * cos($lonDelta);
+
+        $angle = atan2(sqrt($a), $b);
+
+        return $angle * $earthRadius;
     }
 
     /**
