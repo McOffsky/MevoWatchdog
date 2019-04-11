@@ -46,15 +46,14 @@ class BikeEventRepository extends ServiceEntityRepository
      */
     public function getBikeEvents($code, $timespan)
     {
-        $from = $this->getTime("-".$timespan." hours");
+        $from = $this->getTime("-" . $timespan . " hours");
 
         $qb = $this->createQueryBuilder('be')
             ->where('be.timestamp >= :from')
             ->andWhere('be.bikeCode = :code')
             ->setParameter('from', $from)
             ->setParameter('code', $code)
-            ->orderBy('be.id', 'DESC')
-            ;
+            ->orderBy('be.id', 'DESC');
 
         return $qb->getQuery()->getResult();
     }
@@ -66,13 +65,12 @@ class BikeEventRepository extends ServiceEntityRepository
      */
     public function getEvents($timespan, $city = null)
     {
-        $from = $this->getTime("-".$timespan." hours");
+        $from = $this->getTime("-" . $timespan . " hours");
 
         $qb = $this->createQueryBuilder('be')
             ->where('be.timestamp >= :from')
             ->setParameter('from', $from)
-            ->orderBy('be.timestamp', 'DESC')
-            ;
+            ->orderBy('be.timestamp', 'DESC');
 
         if (!empty($city)) {
             $qb->andWhere('be.city = :city')
@@ -90,15 +88,51 @@ class BikeEventRepository extends ServiceEntityRepository
      */
     public function countByType($type, $timespan, $city = null)
     {
-        $from = $this->getTime("-".$timespan." hours");
+        return $this->countByTypeFromTo($type, "-" . $timespan . " hours", "now", $city);
+    }
+
+    /**
+     * @param string $type
+     * @param integer $days
+     * @param string $city
+     * @return array
+     */
+    public function summaryByType($type, $days, $city = null)
+    {
+        $summary = [];
+
+        for ($i = 0; $i < $days; $i++) {
+            $weekday = new DateTime("-".$i."days");
+            $from = $weekday->format("00:00:00 d-m-Y");
+            $to = $weekday->format("23:59:59 d-m-Y");
+
+            $summary[$weekday->format("d-m-Y")] = $this->countByTypeFromTo($type, $from, $to, $city);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param string $type
+     * @param string $from
+     * @param string $to
+     * @param string $city
+     * @return integer
+     */
+    private function countByTypeFromTo($type, $from, $to, $city = null)
+    {
+        $from = $this->getTime($from);
+        $to = $this->getTime($to);
 
         $qb = $this->createQueryBuilder('be')
             ->select("COUNT(DISTINCT be.id)")
-            ->where('be.timestamp >= :from')
+            ->andWhere('be.timestamp >= :from')
+            ->andWhere('be.timestamp <= :to')
             ->setParameter('from', $from)
+            ->setParameter('to', $to)
             ->andWhere('be.type = :type')
             ->setParameter('type', $type)
-            ;
+        ;
 
         if (!empty($city)) {
             $qb->andWhere('be.city = :city')

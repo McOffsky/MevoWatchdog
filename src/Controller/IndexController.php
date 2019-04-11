@@ -43,6 +43,7 @@ class IndexController extends AbstractController
             "lowBatteryCount" => $eventRepo->countByType(BikeEvent::LOW_BATTERY, $timespan, $city),
             "depletedBatteryCount" => $eventRepo->countByType(BikeEvent::DEPLETED_BATTERY, $timespan, $city),
             "replacedBatteryCount" => $eventRepo->countByType(BikeEvent::NEW_BATTERY, $timespan, $city),
+            "replacedBatterySummary" => $eventRepo->summaryByType(BikeEvent::NEW_BATTERY, 7, $city),
 
             "knownBikesCount" => $bikeRepo->getKnownBikesCount($city),
             "events2h" => $eventRepo->getEvents(2, $city),
