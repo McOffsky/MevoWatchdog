@@ -4,10 +4,23 @@
     <meta charset="UTF-8">
     <meta name="keywords" content="Rower, mevo, trójmiasto, gdańsk, sopot, gdynia, rowery elektryczne, watchdog">
     <title>Mevo Watchdog</title>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-40170975-3"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-40170975-3');
+    </script>
+
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"
             integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js" integrity="sha256-4iQZ6BVL4qNKlQ27TExEhBN1HFPvAvAMbFavKKosSWQ=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/pl.js" integrity="sha256-prSi7A1V9ZxDIIGoYopovpFgGHQodz6JVZu5Aad7o8s=" crossorigin="anonymous"></script>
@@ -54,28 +67,8 @@
         }
     </style>
 
-{#    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>#}
-{#    <script>#}
-{#        (adsbygoogle = window.adsbygoogle || []).push({#}
-{#            google_ad_client: "ca-pub-9673975957586546",#}
-{#            enable_page_level_ads: true#}
-{#        });#}
-{#    </script>#}
 </head>
 <body>
-
-{#    <div style="width: 970px; margin: 0 auto;">#}
-{#        <script type="text/javascript">#}
-{#            google_ad_client = "ca-pub-9673975957586546";#}
-{#            google_ad_slot = "9836493541";#}
-{#            google_ad_width = 970;#}
-{#            google_ad_height = 90;#}
-{#        </script>#}
-{#        <!-- Mevo -->#}
-{#        <script type="text/javascript"#}
-{#                src="//pagead2.googlesyndication.com/pagead/show_ads.js">#}
-{#        </script>#}
-{#    </div>#}
 
     {% block content %}
     {% endblock %}

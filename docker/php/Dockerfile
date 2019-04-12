@@ -21,18 +21,17 @@ RUN rm /usr/local/etc/php/conf.d/xdebug.ini
 
 RUN mkdir -p /var/logs/php && chmod 766 /var/logs/php
 
-### Setup entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-
 #Install Cron
 RUN apt-get -y install cron
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
 ADD crontab /etc/cron.d/mevo-cron
 RUN chmod 0644 /etc/cron.d/mevo-cron
 RUN touch /var/log/cron.log
 RUN crontab /etc/cron.d/mevo-cron
+
+### Setup entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD cron && php-fpm
 

@@ -95,23 +95,30 @@ class BikeStatusRepository extends ServiceEntityRepository
         ;
 
         $locations = [];
+        $points = [];
 
         $result = $statusQB->getQuery()->getResult();
 
-//        /** @var BikeStatus $status */
-//        foreach($result as $status) {
-//            $locations[] = [
-//                "time" => date('H:i / d-m-Y', $status->getTimestamp()),
-//                "battery" => $status->getBattery(),
-//                "loc" => $status->getLoc(),
-//            ];
-//        }
+
+        /** @var BikeStatus $status */
+        foreach($result as $status) {
+            $key = $status->getLocation();
+
+            if(empty($points[$key])) {
+                $points[$key] = [
+                    "visit" => [],
+                    "loc" => $status->getLoc(),
+                ];
+            }
+
+            $points[$key]["visit"][] = date('H:i', $status->getTimestamp()) . " / " . $status->getBattery(). "%";
+        }
 
         foreach($result as $status) {
             $locations[] = $status->getLoc();
         }
 
-        return $locations;
+        return ["locations" => $locations, "points" => array_values($points)];
     }
 
     /**

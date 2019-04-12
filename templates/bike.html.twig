@@ -7,7 +7,9 @@
 
             <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 2em;">
                 <canvas id="batteryHistoryChart" style="display: block; width: 100%; height: 400px;"></canvas>
-                <div class="text-center"><i><small>Linie przerywane oznaczają logowanie w nowej lokalizacji.</small></i></div>
+                <div class="text-center"><i>
+                        <small>Linie przerywane oznaczają logowanie w nowej lokalizacji.</small>
+                    </i></div>
                 <hr/>
                 <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
                 <div id="map" style="width: 100%; height: 400px;"></div>
@@ -20,6 +22,22 @@
                     <div class="col-lg-12 col-md-12 order-md-1 order-lg-1" style="padding-bottom: 1em;">
                         <a href="/"><< Wróć do strony głównej</a>
                     </div>
+                    <form method="GET">
+                        <div class="form-group row">
+                            <div class="col-md-5"></div>
+
+                            <div class="col-md-2">
+                                <select name="hours" class="form-control" onchange="this.form.submit()">
+                                    {% for val in [1,2,3,4,5,6,7] %}
+                                        <option {% if timespan == val*24 %}selected{% endif %} value="{{ val*24 }}">
+                                            {{ val }} {% if val == 1 %}dzień{% else %}dni{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5"></div>
+                        </div>
+                    </form>
                     <table style="margin: 0 auto;" class="table">
                         <tr>
                             <td>Kod identyfikacyjny roweru:</td>
@@ -27,7 +45,7 @@
                         </tr>
                         <tr>
                             <td>Ostatni znany poziom baterii:</td>
-                            <td style="text-align: left;"><strong>{{  bike.battery  }}%</strong></td>
+                            <td style="text-align: left;"><strong>{{ bike.battery }}%</strong></td>
                         </tr>
                         <tr>
                             <td>Miasto:</td>
@@ -35,7 +53,8 @@
                         </tr>
                         <tr>
                             <td>Ostatnio widziany:</td>
-                            <td style="text-align: left;"><strong>{{ bike.lastSeenTimestamp|date("H:i d-m-Y") }}</strong></td>
+                            <td style="text-align: left;">
+                                <strong>{{ bike.lastSeenTimestamp|date("H:i d-m-Y") }}</strong></td>
                         </tr>
                         <tr>
                             <td>Liczba zmian lokacji roweru z ostatnich {{ timespan }}h: <br/>
@@ -78,125 +97,187 @@
         </div>
     </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
-<script>
+    <div id="popup"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
+    <script>
 
-    let timeFormat = "HH:mm / DD-MM-YYYY";
+        let timeFormat = "HH:mm / DD-MM-YYYY";
 
-    var batteryHistory = {{ batteryHistory|json_encode|raw }};
+        var batteryHistory = {{ batteryHistory|json_encode|raw }};
+        var locationsHistory = {{ locationHistory|json_encode|raw }};
 
-    // Create the chart.js data structure using 'labels' and 'data'
-    var batteryHistoryChartData = {
-        labels: [],
-        datasets: [{
-            lineTension: 0,
-            borderColor: "#EA5144",
-            fill: true,
-            data: [],
-        }]
-    };
+        // Create the chart.js data structure using 'labels' and 'data'
+        var batteryHistoryChartData = {
+            labels: [],
+            datasets: [{
+                lineTension: 0,
+                borderColor: "#EA5144",
+                fill: true,
+                data: [],
+            }]
+        };
 
-    var batteryHistoryLocationChange = [];
+        var batteryHistoryLocationChange = [];
 
-    $.each(batteryHistory, function (key, value) {
-        batteryHistoryChartData.labels.push(value.time);
-        batteryHistoryChartData.datasets[0].data.push({x:value.time, y:value.battery});
+        $.each(batteryHistory, function (key, value) {
+            batteryHistoryChartData.labels.push(value.time);
+            batteryHistoryChartData.datasets[0].data.push({x: value.time, y: value.battery});
 
-        if (value.locationChange) {
-            batteryHistoryLocationChange.push({
-                type: 'line',
-                mode: 'vertical',
-                scaleID: 'x-axis-0',
-                value: moment(value.time, timeFormat).toDate(),
-                borderColor: '#888',
-                borderWidth: 1,
-                borderDash: [5, 2]
-            });
-        }
-    });
-
-    let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
-        type: 'line',
-        data: batteryHistoryChartData,
-        options: {
-            title: {
-                display: true,
-                text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
-            },
-            legend: {
-                display: false,
-            },
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true,
-                        max: 100
-                    }
-                }],
-                xAxes: [{
-                    type:       "time",
-                    time:       {
-                        format: timeFormat,
-                        displayFormats: { month: 'MM',  day: 'DD', hour: "H:00" },
-                    }
-                }],
-            },
-            annotation: {
-                drawTime: 'beforeDatasetsDraw',
-                annotations: batteryHistoryLocationChange
+            if (value.locationChange) {
+                batteryHistoryLocationChange.push({
+                    type: 'line',
+                    mode: 'vertical',
+                    scaleID: 'x-axis-0',
+                    value: moment(value.time, timeFormat).toDate(),
+                    borderColor: '#888',
+                    borderWidth: 1,
+                    borderDash: [5, 2]
+                });
             }
-        },
-    });
+        });
 
-    var path =  new ol.geom.LineString({{ locationHistory|json_encode|raw }});
-    path.transform('EPSG:4326', 'EPSG:3857');
+        var pointsHistory = [];
 
-    var pathLayer = new ol.layer.Vector({
-        source: new ol.source.Vector({
-            features: [new ol.Feature({
-                geometry: path,
-                name: 'Line'
-            })]
-        }),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 3,
-                color: "#EA5144",
-            })
-        })
-    });
+        $.each(locationsHistory.points, function (key, value) {
+            pointsHistory.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: value.visit.join("<br/>"),
+            }));
+        });
 
-    var markerLayer = new ol.layer.Vector({
-        source:new ol.source.Vector({
-            features: [new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat({{ bike.loc|json_encode|raw }})),
-            })]
-        }),
-        style: new ol.style.Style({
-            image: new ol.style.Icon({
-                anchor: [0.5, 0.5],
-                anchorXUnits: "fraction",
-                anchorYUnits: "fraction",
-                src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg"
-            })
-        })
-    });
+        let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
+            type: 'line',
+            data: batteryHistoryChartData,
+            options: {
+                title: {
+                    display: true,
+                    text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
+                },
+                legend: {
+                    display: false,
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }],
+                    xAxes: [{
+                        type: "time",
+                        time: {
+                            format: timeFormat,
+                            displayFormats: {month: 'MM', day: 'DD', hour: "H:00"},
+                        }
+                    }],
+                },
+                annotation: {
+                    drawTime: 'beforeDatasetsDraw',
+                    annotations: batteryHistoryLocationChange
+                }
+            },
+        });
 
-    var map = new ol.Map({
-        target: 'map',
-        layers: [
-            new ol.layer.Tile({
-                source: new ol.source.OSM()
+
+        var pointsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: pointsHistory
             }),
-            pathLayer,
-            markerLayer,
-        ],
-        view: new ol.View({
-            center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
-            zoom: 11
-        })
-    });
+            style: new ol.style.Style({
+                image: new ol.style.Icon({
+                    anchor: [0.5, 0.5],
+                    anchorXUnits: "fraction",
+                    anchorYUnits: "fraction",
+                    src: "https://upload.wikimedia.org/wikipedia/commons/5/50/Small_blue_dot.png"
+                })
+            })
+        });
 
 
-</script>
+        var path = new ol.geom.LineString(locationsHistory.locations);
+        path.transform('EPSG:4326', 'EPSG:3857');
+
+        var pathLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: [new ol.Feature({
+                    geometry: path,
+                    name: 'Line'
+                })]
+            }),
+            style: new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    width: 3,
+                    color: "#EA5144",
+                })
+            })
+        });
+
+        var markerLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: [new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat({{ bike.loc|json_encode|raw }})),
+                    label: "{{ bike.lastSeenTimestamp|date("H:i") }} / {{ bike.battery }}%"
+                })]
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.Icon({
+                    anchor: [0.5, 0.5],
+                    anchorXUnits: "fraction",
+                    anchorYUnits: "fraction",
+                    src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg"
+                })
+            })
+        });
+
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                pathLayer,
+                pointsLayer,
+                markerLayer,
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
+                zoom: 11
+            })
+        });
+
+        var element = document.getElementById('popup');
+
+        var popup = new ol.Overlay({
+            element: element,
+            positioning: 'bottom-center',
+            stopEvent: false,
+            offset: [0, -10]
+        });
+
+        map.addOverlay(popup);
+
+        // display popup on click
+        map.on('click', function (evt) {
+            $(element).popover('hide');
+            var feature = map.forEachFeatureAtPixel(evt.pixel,
+                function (feature) {
+                    return feature;
+                });
+
+            if (feature && feature.get('label')) {
+                var coordinates = feature.getGeometry().getCoordinates();
+                popup.setPosition(coordinates);
+
+                $(element).attr("data-content", feature.get('label'));
+                $(element).popover({
+                    placement: 'top',
+                    html: true
+                })
+                $(element).popover('show');
+            } else {
+                $(element).popover('hide');
+            }
+        });
+
+    </script>
 {% endblock %}
