@@ -41,6 +41,11 @@ class BikeEvent
      */
     private $city;
 
+    /**
+     * @ORM\Column(type="string", length=50)
+     */
+    private $location;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -94,4 +99,26 @@ class BikeEvent
         return $this;
     }
 
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(string $location): self
+    {
+        $this->location = $location;
+
+        return $this;
+    }
+
+    public function getLoc(): ?array
+    {
+        if (empty($this->location)) {
+            return null;
+        }
+
+        $data = explode("|", $this->location);
+
+        return [floatval($data[1]), floatval($data[0])];
+    }
 }

@@ -87,6 +87,7 @@ class FetchCommand extends Command
             $bikeReloadedEvent->setTimestamp($now->getTimestamp());
             $bikeReloadedEvent->setBikeCode($bike->getCode());
             $bikeReloadedEvent->setCity($status->getCity());
+            $bikeReloadedEvent->setLocation($status->getLocation());
             $this->em->persist($bikeReloadedEvent);
         }
 
@@ -96,6 +97,7 @@ class FetchCommand extends Command
             $bikeDepletedEvent->setTimestamp($now->getTimestamp());
             $bikeDepletedEvent->setBikeCode($bike->getCode());
             $bikeDepletedEvent->setCity($status->getCity());
+            $bikeDepletedEvent->setLocation($status->getLocation());
             $this->em->persist($bikeDepletedEvent);
             return;
         }
@@ -106,6 +108,7 @@ class FetchCommand extends Command
             $bikeLowEvent->setTimestamp($now->getTimestamp());
             $bikeLowEvent->setBikeCode($bike->getCode());
             $bikeLowEvent->setCity($status->getCity());
+            $bikeLowEvent->setLocation($status->getLocation());
             $this->em->persist($bikeLowEvent);
             return;
         }

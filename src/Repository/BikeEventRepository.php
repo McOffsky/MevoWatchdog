@@ -61,9 +61,10 @@ class BikeEventRepository extends ServiceEntityRepository
     /**
      * @param int $timespan
      * @param string $city
+     * @param string $type
      * @return array
      */
-    public function getEvents($timespan, $city = null)
+    public function getEvents($timespan, $city = null, $type = null)
     {
         $from = $this->getTime("-" . $timespan . " hours");
 
@@ -77,7 +78,40 @@ class BikeEventRepository extends ServiceEntityRepository
                 ->setParameter('city', $city);
         }
 
+        if (!empty($type)) {
+            $qb->andWhere('be.type = :type')
+                ->setParameter('type', $type);
+        }
+
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param int $timespan
+     * @param string $city
+     * @param string $type
+     * @return array
+     */
+    public function getEventPoints($timespan, $city = null, $type = null)
+    {
+        $events = $this->getEvents($timespan, $city, $type);
+
+        $points = [];
+
+        foreach ($events as $event) {
+            $loc = $event->getLoc();
+            $code = $event->getBikeCode();
+
+            if (!empty($loc)) {
+                $points[] = [
+                    'loc' => $loc,
+                    'type' => $event->getType(),
+                    'label' => '<a href="/bike/'.$code.'">Rower '.$code.'</a> <br/>'.date("H:i / d-m-Y", $event->getTimestamp())
+                ];
+            }
+        }
+
+        return $points;
     }
 
     /**

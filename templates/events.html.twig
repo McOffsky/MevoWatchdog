@@ -1,0 +1,245 @@
+{% extends "base.html.twig" %}
+
+{% block content %}
+    <div class="container" style="max-width: 100%;">
+
+        <div class="row">
+
+            <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 2em;">
+                <h5>Dziennik zdarzeń (ostatnie {{ timespan }}h):</h5>
+
+                <div class="scrollableTable">
+                    <table class="table">
+                        <thead class="thead-light">
+                        <tr>
+                            <th scope="col" style="width: 15%;">Rower</th>
+                            <th scope="col" style="width: 45%;">Typ</th>
+                            <th scope="col">Miasto</th>
+                            <th scope="col" style="width: 20%;">Czas</th>
+                        </tr>
+                        </thead>
+                        <tbody style="min-height: 730px;">
+                        {% for event in events %}
+                            <tr class="event_{{ event.type }}">
+                                <td style="width: 15%;">
+                                    <a href="{{ path("bike_view", {code: event.bikeCode}) }}">{{ event.bikeCode }}</a>
+                                </td>
+                                <td style="width: 45%;">
+                                    {{ event.type|trans }}
+                                </td>
+                                <td>
+                                    {{ event.city|default("") }}
+                                </td>
+                                <td style="width: 20%;">{{ event.timestamp|date("H:i / d-m-Y") }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 2em;">
+                <div style="text-align: center; padding: 2em 0em 1em">
+                    {% include "logo.html.twig" %}
+
+                    <div class="col-lg-12 col-md-12 order-md-1 order-lg-1" style="padding-bottom: 1em;">
+                        <a href="/"><< Wróć do strony głównej</a>
+                    </div>
+                    <form method="GET">
+                        <div class="form-group row">
+                            <div class="col-md-2"></div>
+
+                            <div class="col-md-3">
+                                <select name="city" class="form-control" onchange="this.form.submit()">
+                                    <option value="">--Wybierz miasto--</option>
+                                    {% for val in knownCities %}
+                                        <option {% if city == val %}selected{% endif %}
+                                                value="{{ val }}">{{ val }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <select name="hours" class="form-control" onchange="this.form.submit()">
+                                    {% for val in [1,3,6,12] %}
+                                        <option {% if timespan == val %}selected{% endif %} value="{{ val }}">
+                                            {{ val }} {% if val == 1 %}godzina{% elseif val == 3 %}godziny{% else %}godzin{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                    {% for val in [1,2,3,4,5,6,7] %}
+                                        <option {% if timespan == val*24 %}selected{% endif %} value="{{ val*24 }}">
+                                            {{ val }} {% if val == 1 %}dzień{% else %}dni{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="type" class="form-control" onchange="this.form.submit()">
+                                    <option value="">--Wybierz typ--</option>
+                                    {% for val in [
+                                        {
+                                            type: "new_battery",
+                                            label: "Wymiana baterii"
+                                        },
+                                        {
+                                            type: "low_battery",
+                                            label: "Bateria < 30%"
+                                        },
+                                        {
+                                            type: "depleted_battery",
+                                            label: "Bateria rozładowana"
+                                        }
+                                    ] %}
+                                        <option {% if type == val.type %}selected{% endif %} value="{{ val.type }}">
+                                            {{ val.label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+                    </form>
+                    <hr/>
+                </div>
+
+                <div class="col-lg-12 col-md-12">
+                    <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
+                    <div id="map" style="width: 100%; height: 410px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="popup"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
+    <script>
+
+        let timeFormat = "HH:mm / DD-MM-YYYY";
+
+        let points = {{ points|json_encode|raw }};
+
+        let newBatteryPoints = [];
+        let lowBatteryPoints = [];
+        let depletedBatteryPoints = [];
+
+        $.each(points, function (key, value) {
+
+            var point = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: value.label,
+            });
+
+            switch (value.type) {
+                case "new_battery":
+                    newBatteryPoints.push(point);
+                    break;
+                case "low_battery":
+                    lowBatteryPoints.push(point);
+                    break;
+                case "depleted_battery":
+                    depletedBatteryPoints.push(point);
+                    break;
+            }
+        });
+
+        var newBatteryLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: newBatteryPoints
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.RegularShape({
+                    fill: new ol.style.Fill({color: 'green'}),
+                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                    points: 4,
+                    radius: 6,
+                })
+            })
+        });
+
+        var lowBatteryLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: lowBatteryPoints
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.RegularShape({
+                    fill: new ol.style.Fill({color: 'yellow'}),
+                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                    points: 4,
+                    radius: 6,
+                })
+            })
+        });
+
+        var depletedBatteryLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: depletedBatteryPoints
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.RegularShape({
+                    fill: new ol.style.Fill({color: 'red'}),
+                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                    points: 4,
+                    radius: 6,
+                })
+            })
+        });
+
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                lowBatteryLayer,
+                depletedBatteryLayer,
+                newBatteryLayer,
+            ],
+
+            view: new ol.View({
+                {% if city is empty or points is empty %}
+                    center: ol.proj.fromLonLat([18.585843, 54.380577]),
+                    zoom: 9
+                {% else %}
+                    center: ol.proj.fromLonLat({{ points|first.loc|json_encode|raw }}),
+                    zoom: 11
+                {% endif %}
+            })
+        });
+
+        var element = document.getElementById('popup');
+
+        var popup = new ol.Overlay({
+            element: element,
+            positioning: 'bottom-center',
+            stopEvent: false,
+            offset: [0, -10]
+        });
+
+        map.addOverlay(popup);
+
+        // display popup on click
+        map.on('click', function (evt) {
+            $(element).popover('hide');
+            var feature = map.forEachFeatureAtPixel(evt.pixel,
+                function (feature) {
+                    return feature;
+                });
+
+            if (feature && feature.get('label')) {
+                var coordinates = feature.getGeometry().getCoordinates();
+                popup.setPosition(coordinates);
+
+                $(element).attr("data-content", feature.get('label'));
+                $(element).popover({
+                    placement: 'top',
+                    html: true
+                })
+                $(element).popover('show');
+            } else {
+                $(element).popover('hide');
+            }
+        });
+
+    </script>
+{% endblock %}
