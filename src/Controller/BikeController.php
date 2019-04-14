@@ -33,12 +33,54 @@ class BikeController extends AbstractController
         $context = [
             'bike' => $bikeRepo->findBike($code),
             'events' => $eventRepo->getBikeEvents($code, $timespan),
-            'batteryHistory' => $statusRepo->getBikeBatteryHistory($code, $timespan),
+            'mapPoints' => $this->compileMapPoints($timespan, $code),
             'locationHistory' => $statusRepo->getBikeLocationHistory($code, $timespan),
+
+            'batteryHistory' => $statusRepo->getBikeBatteryHistory($code, $timespan),
             "locationChangeCount" => $statusRepo->getLocationChangeTimespanCount($timespan, $code),
             "timespan" => $timespan,
         ];
 
         return $this->render('bike.html.twig', $context);
+    }
+
+    private function compileMapPoints($timespan, $code)
+    {
+        /** @var BikeRepository $bikeRepo */
+        $bikeRepo = $this->getDoctrine()->getRepository(Bike::class);
+
+        /** @var BikeStatusRepository $statusRepo */
+        $statusRepo = $this->getDoctrine()->getRepository(BikeStatus::class);
+
+        /** @var BikeEventRepository $eventRepo */
+        $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
+
+        $points = $statusRepo->getBikePointsHistory($code, $timespan);
+
+
+        $eventPoints = $eventRepo->getEventPoints($timespan, null, null, $code);
+        foreach ($eventPoints as $loc => $eventPoint) {
+            if(!empty($points[$loc])) {
+                $points[$loc] = array_merge($points[$loc], $eventPoint);
+            } else {
+                $points[$loc] = $eventPoint;
+            }
+        }
+
+        $bike = $bikeRepo->findBike($code);
+        $bikePoint = [
+            'loc' => $bike->getLoc(),
+            'battery' => $bike->getBattery(),
+            'time' => date("H:i / d-m-Y", $bike->getLastSeenTimestamp()),
+            'current' => true,
+        ];
+
+        if(!empty($points[$bike->getLocation()])) {
+            $points[$bike->getLocation()] = array_merge($points[$bike->getLocation()], $bikePoint);
+        } else {
+            $points[$bike->getLocation()] = $bikePoint;
+        }
+
+        return array_values($points);
     }
 }

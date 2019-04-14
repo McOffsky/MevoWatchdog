@@ -35,6 +35,8 @@
                         {% endfor %}
                         </tbody>
                     </table>
+
+
                 </div>
             </div>
 
@@ -100,11 +102,15 @@
                             <div class="col-md-2"></div>
                         </div>
                     </form>
-                    <hr/>
+                    <table style="margin: 0 auto;" class="table">
+                        <tr>
+                            <td>Liczba zdarzeń:</td>
+                            <td style="text-align: left;"><strong>{{ events|length }}</strong></td>
+                        </tr>
+                    </table>
                 </div>
 
                 <div class="col-lg-12 col-md-12">
-                    <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
                     <div id="map" style="width: 100%; height: 410px;"></div>
                 </div>
             </div>
@@ -117,72 +123,77 @@
 
         let timeFormat = "HH:mm / DD-MM-YYYY";
 
-        let points = {{ points|json_encode|raw }};
+        let points = [];
 
-        let newBatteryPoints = [];
-        let lowBatteryPoints = [];
-        let depletedBatteryPoints = [];
+        $.each({{ points|json_encode|raw }}, function (key, value) {
+            let labels = [];
+            $.each(value.events, function(eventKey, event){
+                let label = '<a href="/bike/'+event.bike+'">Rower '+event.bike+'</a> - ';
+                switch (event.type) {
+                    case "new_battery":
+                        label += "nowa bateria";
+                        break;
+                    case "low_battery":
+                        label += "słaba bateria";
+                        break;
+                    case "depleted_battery":
+                        label += "rozładowany";
+                        break;
+                }
 
-        $.each(points, function (key, value) {
+                label += " - " + event.time;
 
-            var point = new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
-                label: value.label,
+                labels.push(label);
             });
 
-            switch (value.type) {
-                case "new_battery":
-                    newBatteryPoints.push(point);
-                    break;
-                case "low_battery":
-                    lowBatteryPoints.push(point);
-                    break;
-                case "depleted_battery":
-                    depletedBatteryPoints.push(point);
-                    break;
+            points.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: labels.join("<br/>"),
+                event_type: value.events[0].type,
+                event_count: value.events.length
+            }));
+
+        });
+
+
+        var pointsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: points
+            }),
+            style: function(feature) {
+                let image = null;
+
+                switch (feature.get("event_type")) {
+                    case "new_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'green'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 5 + feature.get("event_count"),
+                        })
+                        break;
+                    case "low_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'yellow'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 5 + feature.get("event_count"),
+                        })
+                        break;
+                    case "depleted_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: '#EA5144'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 5 + feature.get("event_count"),
+                        })
+                        break;
+                }
+
+                return [new ol.style.Style({
+                    image: image
+                })];
             }
-        });
-
-        var newBatteryLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: newBatteryPoints
-            }),
-            style: new ol.style.Style({
-                image: new ol.style.RegularShape({
-                    fill: new ol.style.Fill({color: 'green'}),
-                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                    points: 4,
-                    radius: 6,
-                })
-            })
-        });
-
-        var lowBatteryLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: lowBatteryPoints
-            }),
-            style: new ol.style.Style({
-                image: new ol.style.RegularShape({
-                    fill: new ol.style.Fill({color: 'yellow'}),
-                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                    points: 4,
-                    radius: 6,
-                })
-            })
-        });
-
-        var depletedBatteryLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: depletedBatteryPoints
-            }),
-            style: new ol.style.Style({
-                image: new ol.style.RegularShape({
-                    fill: new ol.style.Fill({color: 'red'}),
-                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                    points: 4,
-                    radius: 6,
-                })
-            })
         });
 
         var map = new ol.Map({
@@ -191,9 +202,7 @@
                 new ol.layer.Tile({
                     source: new ol.source.OSM()
                 }),
-                lowBatteryLayer,
-                depletedBatteryLayer,
-                newBatteryLayer,
+                pointsLayer,
             ],
 
             view: new ol.View({
@@ -213,14 +222,13 @@
             element: element,
             positioning: 'bottom-center',
             stopEvent: false,
-            offset: [0, -10]
+            offset: [0, 0]
         });
 
         map.addOverlay(popup);
 
         // display popup on click
-        map.on('click', function (evt) {
-            $(element).popover('hide');
+        map.on('pointermove', function (evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel,
                 function (feature) {
                     return feature;

@@ -103,10 +103,7 @@
 
         let timeFormat = "HH:mm / DD-MM-YYYY";
 
-        var batteryHistory = {{ batteryHistory|json_encode|raw }};
-        var locationsHistory = {{ locationHistory|json_encode|raw }};
-
-        // Create the chart.js data structure using 'labels' and 'data'
+        var batteryHistoryLocationChange = [];
         var batteryHistoryChartData = {
             labels: [],
             datasets: [{
@@ -117,9 +114,7 @@
             }]
         };
 
-        var batteryHistoryLocationChange = [];
-
-        $.each(batteryHistory, function (key, value) {
+        $.each({{ batteryHistory|json_encode|raw }}, function (key, value) {
             batteryHistoryChartData.labels.push(value.time);
             batteryHistoryChartData.datasets[0].data.push({x: value.time, y: value.battery});
 
@@ -134,15 +129,6 @@
                     borderDash: [5, 2]
                 });
             }
-        });
-
-        var pointsHistory = [];
-
-        $.each(locationsHistory.points, function (key, value) {
-            pointsHistory.push(new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
-                label: value.visit.join("<br/>"),
-            }));
         });
 
         let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
@@ -178,23 +164,140 @@
             },
         });
 
+        let mapPoints = [];
 
-        var pointsLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: pointsHistory
-            }),
-            style: new ol.style.Style({
-                image: new ol.style.Icon({
-                    anchor: [0.5, 0.5],
-                    anchorXUnits: "fraction",
-                    anchorYUnits: "fraction",
-                    src: "https://upload.wikimedia.org/wikipedia/commons/5/50/Small_blue_dot.png"
-                })
-            })
+        $.each({{ mapPoints|json_encode|raw }}, function (key, value) {
+            let labels = [];
+            let point_type = "location";
+            let event_type = null;
+
+            if (value.hasOwnProperty("current")) {
+                labels.push("<strong>Ostatnio widziany:</strong>");
+                labels.push(value.time);
+                labels.push("<strong>Ostatni znany stan baterii:</strong>");
+                labels.push(value.battery + "%");
+            }
+
+            if (value.hasOwnProperty("events")) {
+
+                labels.push("<strong>Status:</strong>");
+                point_type = value.events[0].type;
+                event_type = value.events[0].type;
+
+                $.each(value.events, function(eventKey, event){
+                    let label = '';
+                    switch (event.type) {
+                        case "new_battery":
+                            label += "Nowa bateria";
+                            break;
+                        case "low_battery":
+                            label += "Słaba bateria";
+                            break;
+                        case "depleted_battery":
+                            label += "Rozładowany";
+                            break;
+                    }
+
+                    label += " - " + event.time;
+
+                    labels.push(label);
+                });
+            }
+
+            if (value.hasOwnProperty("current")) {
+                point_type = "current";
+            }
+
+            if (value.hasOwnProperty("visit")) {
+                labels.push("<strong>Pojawienia się w lokalizacji:</strong>");
+                $.each(value.visit, function(visitKey, visit){
+                    labels.push(visit);
+                });
+            }
+
+            mapPoints.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: labels.join("<br/>"),
+                point_type: point_type,
+                event_type: event_type
+            }));
+
         });
 
 
-        var path = new ol.geom.LineString(locationsHistory.locations);
+        let mapPointsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: mapPoints
+            }),
+            style: function(feature) {
+                let image = null;
+
+                switch (feature.get("point_type")) {
+                    case "new_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'green'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 6,
+                        })
+                        break;
+                    case "low_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'yellow'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 6,
+                        })
+                        break;
+                    case "depleted_battery":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'red'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 4,
+                            radius: 6,
+                        })
+                        break;
+                    case "location":
+                        image = new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: '#BFE3F0'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 10,
+                            radius: 5,
+                        })
+                        break;
+                    case "current":
+                        let fill = new ol.style.Fill({color: '#EA5144'});
+
+                        switch (feature.get("event_type")) {
+                            case "new_battery":
+                                fill = new ol.style.Fill({color: 'green'});
+                                break;
+                            case "low_battery":
+                                fill = new ol.style.Fill({color: 'yellow'});
+                                break;
+                            case "depleted_battery":
+                                fill = new ol.style.Fill({color: 'red'});
+                                break;
+                        }
+
+                        image = new ol.style.RegularShape({
+                            fill: fill,
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 10,
+                            radius: 7,
+                        })
+                        
+                        break;
+                }
+
+                return [new ol.style.Style({
+                    image: image
+                })];
+            }
+        });
+
+
+        var path = new ol.geom.LineString({{ locationHistory|json_encode|raw }});
         path.transform('EPSG:4326', 'EPSG:3857');
 
         var pathLayer = new ol.layer.Vector({
@@ -212,23 +315,6 @@
             })
         });
 
-        var markerLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: [new ol.Feature({
-                    geometry: new ol.geom.Point(ol.proj.fromLonLat({{ bike.loc|json_encode|raw }})),
-                    label: "{{ bike.lastSeenTimestamp|date("H:i") }} / {{ bike.battery }}%"
-                })]
-            }),
-            style: new ol.style.Style({
-                image: new ol.style.Icon({
-                    anchor: [0.5, 0.5],
-                    anchorXUnits: "fraction",
-                    anchorYUnits: "fraction",
-                    src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg"
-                })
-            })
-        });
-
         var map = new ol.Map({
             target: 'map',
             layers: [
@@ -236,8 +322,7 @@
                     source: new ol.source.OSM()
                 }),
                 pathLayer,
-                pointsLayer,
-                markerLayer,
+                mapPointsLayer,
             ],
             view: new ol.View({
                 center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
@@ -251,14 +336,13 @@
             element: element,
             positioning: 'bottom-center',
             stopEvent: false,
-            offset: [0, -10]
+            offset: [0, 0]
         });
 
         map.addOverlay(popup);
 
         // display popup on click
-        map.on('click', function (evt) {
-            $(element).popover('hide');
+        map.on('pointermove', function (evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel,
                 function (feature) {
                     return feature;

@@ -46,32 +46,25 @@ class BikeEventRepository extends ServiceEntityRepository
      */
     public function getBikeEvents($code, $timespan)
     {
-        $from = $this->getTime("-" . $timespan . " hours");
-
-        $qb = $this->createQueryBuilder('be')
-            ->where('be.timestamp >= :from')
-            ->andWhere('be.bikeCode = :code')
-            ->setParameter('from', $from)
-            ->setParameter('code', $code)
-            ->orderBy('be.id', 'DESC');
-
-        return $qb->getQuery()->getResult();
+        return $this->getEvents($timespan, null, null, $code);
     }
 
     /**
      * @param int $timespan
      * @param string $city
      * @param string $type
+     * @param string $bikeCode
+     * @param string $order
      * @return array
      */
-    public function getEvents($timespan, $city = null, $type = null)
+    public function getEvents($timespan, $city = null, $type = null, $bikeCode = null)
     {
         $from = $this->getTime("-" . $timespan . " hours");
 
         $qb = $this->createQueryBuilder('be')
             ->where('be.timestamp >= :from')
             ->setParameter('from', $from)
-            ->orderBy('be.timestamp', 'DESC');
+            ->orderBy('be.timestamp', "DESC");
 
         if (!empty($city)) {
             $qb->andWhere('be.city = :city')
@@ -83,6 +76,11 @@ class BikeEventRepository extends ServiceEntityRepository
                 ->setParameter('type', $type);
         }
 
+        if (!empty($bikeCode)) {
+            $qb->andWhere('be.bikeCode = :code')
+                ->setParameter('code', $bikeCode);
+        }
+
         return $qb->getQuery()->getResult();
     }
 
@@ -90,23 +88,31 @@ class BikeEventRepository extends ServiceEntityRepository
      * @param int $timespan
      * @param string $city
      * @param string $type
+     * @param string $bikeCode
      * @return array
      */
-    public function getEventPoints($timespan, $city = null, $type = null)
+    public function getEventPoints($timespan, $city = null, $type = null, $bikeCode = null)
     {
-        $events = $this->getEvents($timespan, $city, $type);
+        $events = $this->getEvents($timespan, $city, $type, $bikeCode);
 
         $points = [];
 
+        /** @var BikeEvent $event */
         foreach ($events as $event) {
-            $loc = $event->getLoc();
-            $code = $event->getBikeCode();
+            $location = $event->getLocation();
 
-            if (!empty($loc)) {
-                $points[] = [
-                    'loc' => $loc,
+            if (!empty($location)) {
+                if (!array_key_exists($location,$points)) {
+                    $points[$location] = [
+                        'loc' => $event->getLoc(),
+                        'events' => [],
+                    ];
+                }
+
+                $points[$event->getLocation()]['events'][] = [
                     'type' => $event->getType(),
-                    'label' => '<a href="/bike/'.$code.'">Rower '.$code.'</a> <br/>'.date("H:i / d-m-Y", $event->getTimestamp())
+                    'bike' => $event->getBikeCode(),
+                    'time' => date("H:i / d-m-Y", $event->getTimestamp()),
                 ];
             }
         }
