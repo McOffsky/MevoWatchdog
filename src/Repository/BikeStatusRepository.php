@@ -215,7 +215,7 @@ class BikeStatusRepository extends ServiceEntityRepository
             $from = $time->format("H:00:00 d-m-Y");
             $to = $time->format("H:59:59 d-m-Y");
 
-            $summary[$time->format("H:00-:59")] = $this->getLocationChangeCount($from, $to, null, $city);
+            $summary[$time->format("H:00-:59 / d-m")] = $this->getLocationChangeCount($from, $to, null, $city);
         }
 
         return $summary;
@@ -280,14 +280,12 @@ class BikeStatusRepository extends ServiceEntityRepository
     {
         $summary = [];
 
-
-
         for ($i = 0; $i < $timespan; $i++) {
             $time = new DateTime("-" . $i . "hours");
             $from = $time->format("H:00:00 d-m-Y");
             $to = $time->format("H:59:59 d-m-Y");
 
-            $summary[$time->format("H:00-:59")] = $this->getActiveCount($from, $to, $city, self::BATTERY_CUTOFF_LEVEL);
+            $summary[$time->format("H:00-:59 / d-m")] = $this->getActiveCount($from, $to, $city, self::BATTERY_CUTOFF_LEVEL);
         }
 
 
