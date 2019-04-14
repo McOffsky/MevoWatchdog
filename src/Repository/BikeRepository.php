@@ -168,13 +168,13 @@ class BikeRepository extends ServiceEntityRepository
     public function getLastSeenActive($timespan = 12, $city = null)
     {
         $summary = [];
-        $summary["Mniej niż 1h"] = $this->countByActivity("-1hour", "now", $city);
+        $summary["< 1h"] = $this->countByActivity("-1hour", "now", $city);
 
         for($i = 2; $i <= $timespan; $i++) {
             $summary[($i-1)."h - ".$i."h"] = $this->countByActivity("-".$i."hours", "-".($i-1)."hours", $city);
         }
 
-        $summary["Więcej niż ".($i-1)."h"] = $this->countByActivity("-1week", "-".$i."hours", $city);
+        $summary["> ".($i-1)."h"] = $this->countByActivity("-1week", "-".$i."hours", $city);
 
         return $summary;
     }

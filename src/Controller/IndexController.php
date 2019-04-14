@@ -32,13 +32,13 @@ class IndexController extends AbstractController
         $city = $request->query->get("city", null);
 
         $context = [
-            "activeSummary" => $statusRepo->getActiveSummary($timespan, $city),
             "availableSummary" => $statusRepo->getAvailableSummary($timespan, $city),
             "lastSeenActive" => $bikeRepo->getLastSeenActive($timespan, $city),
             "countAvailable2h" => $bikeRepo->getActiveCount(2, $city),
             "batteryStatus" => $bikeRepo->getBatteryStatus($timespan, $city),
             "locationChangeCount" => $statusRepo->getLocationChangeTimespanCount($timespan, null, $city),
-            "locationChangeSummary" => $statusRepo->getLocationChangeSummary(7, $city),
+            "locationChangeSummary" => $statusRepo->getLocationChangeSummary($timespan, $city),
+            "locationChangeDailySummary" => $statusRepo->getLocationChangeDailySummary(7, $city),
 
             "lowBatteryCount" => $eventRepo->countByType(BikeEvent::LOW_BATTERY, $timespan, $city),
             "depletedBatteryCount" => $eventRepo->countByType(BikeEvent::DEPLETED_BATTERY, $timespan, $city),

@@ -179,7 +179,13 @@ class BikeStatusRepository extends ServiceEntityRepository
         return $this->getLocationChangeCount("-".$timespan."hours", "now", $code, $city);
     }
 
-    public function getLocationChangeSummary($days = 7, $city = null)
+    /**
+     * @param int $days
+     * @param string $city
+     * @return array
+     * @throws Exception
+     */
+    public function getLocationChangeDailySummary($days = 7, $city = null)
     {
         $summary = [];
 
@@ -189,6 +195,27 @@ class BikeStatusRepository extends ServiceEntityRepository
             $to = $weekday->format("23:59:59 d-m-Y");
 
             $summary[$weekday->format("d-m-Y")] = $this->getLocationChangeCount($from, $to, null, $city);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param int $days
+     * @param string $city
+     * @return array
+     * @throws Exception
+     */
+    public function getLocationChangeSummary($timespan, $city = null)
+    {
+        $summary = [];
+
+        for ($i = 0; $i < $timespan; $i++) {
+            $time = new DateTime("-".$i."hours");
+            $from = $time->format("H:00:00 d-m-Y");
+            $to = $time->format("H:59:59 d-m-Y");
+
+            $summary[$time->format("H:00-:59")] = $this->getLocationChangeCount($from, $to, null, $city);
         }
 
         return $summary;
@@ -235,7 +262,7 @@ class BikeStatusRepository extends ServiceEntityRepository
     {
         $summary = [];
 
-        $summary["Do 1h"] = $this->getActiveCount("-1hour", "now", $city);
+        $summary["< 1h"] = $this->getActiveCount("-1hour", "now", $city);
 
         for($i = 2; $i <= $timespan; $i++) {
             $summary[($i-1)."h - ".$i."h"] = $this->getActiveCount("-".$i."hours", "-".($i-1)."hours", $city);
@@ -253,11 +280,16 @@ class BikeStatusRepository extends ServiceEntityRepository
     {
         $summary = [];
 
-        $summary["Do 1h"] = $this->getActiveCount("-1hour", "now", $city, self::BATTERY_CUTOFF_LEVEL);
 
-        for($i = 2; $i <= $timespan; $i++) {
-            $summary[($i-1)."h - ".$i."h"] = $this->getActiveCount("-".$i."hours", "-".($i-1)."hours", $city, self::BATTERY_CUTOFF_LEVEL);
+
+        for ($i = 0; $i < $timespan; $i++) {
+            $time = new DateTime("-" . $i . "hours");
+            $from = $time->format("H:00:00 d-m-Y");
+            $to = $time->format("H:59:59 d-m-Y");
+
+            $summary[$time->format("H:00-:59")] = $this->getActiveCount($from, $to, $city, self::BATTERY_CUTOFF_LEVEL);
         }
+
 
         return $summary;
     }
