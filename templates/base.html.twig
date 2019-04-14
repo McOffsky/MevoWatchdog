@@ -80,5 +80,29 @@
     <div style="text-align: center; font-size: 0.7em;">
         <i>created by <a href="mailto:mcoffsky@gmail.com">mco</a> @ 2019 </i>
     </div>
+    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css" />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js"></script>
+    <script>
+        window.addEventListener("load", function(){
+            window.cookieconsent.initialise({
+                "palette": {
+                    "popup": {
+                        "background": "#BFE3F0"
+                    },
+                    "button": {
+                        "background": "#EA5144"
+                    }
+                },
+                "content": {
+                    "message": "Mevo Watchdog nie zapisuje żadnych danych użytkownika. Ale używamy ciasteczek do optymalizacji i analizy ruchu.",
+                    "dismiss": "Rozumiem!",
+                    "link": "Dowiedz się więcej...",
+                    "href": "https://www.cloudflare.com/cookie-policy/"
+                }
+
+            })});
+    </script>
 </body>
+
+
 </html>

@@ -41,9 +41,16 @@ class BikeController extends AbstractController
             "timespan" => $timespan,
         ];
 
-        return $this->render('bike.html.twig', $context);
+        $response = $this->render('bike.html.twig', $context);
+        $response->setSharedMaxAge(60);
+        return $response;
     }
 
+    /**
+     * @param integer $timespan
+     * @param string $code
+     * @return array
+     */
     private function compileMapPoints($timespan, $code)
     {
         /** @var BikeRepository $bikeRepo */

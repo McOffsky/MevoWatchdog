@@ -54,6 +54,10 @@ class IndexController extends AbstractController
             "knownCities" => $bikeRepo->getCities(),
         ];
 
-        return $this->render('charts.html.twig', $context);
+
+
+        $response = $this->render('charts.html.twig', $context);
+        $response->setSharedMaxAge(60);
+        return $response;
     }
 }

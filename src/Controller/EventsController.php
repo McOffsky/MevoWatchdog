@@ -38,6 +38,8 @@ class EventsController extends AbstractController
             "knownCities" => $bikeRepo->getCities()
         ];
 
-        return $this->render('events.html.twig', $context);
+        $response = $this->render('events.html.twig', $context);
+        $response->setSharedMaxAge(60);
+        return $response;
     }
 }
