@@ -166,7 +166,7 @@
 
         let mapPoints = [];
 
-        $.each({{ mapPoints|json_encode|raw }}, function (key, value) {
+        $.each({{ mapPoints|reverse|json_encode|raw }}, function (key, value) {
             let labels = [];
             let point_type = "location";
             let event_type = null;
@@ -266,7 +266,7 @@
                         })
                         break;
                     case "current":
-                        let fill = new ol.style.Fill({color: '#EA5144'});
+                        let fill = new ol.style.Fill({color: '#BFE3F0'});
 
                         switch (feature.get("event_type")) {
                             case "new_battery":
@@ -283,8 +283,8 @@
                         image = new ol.style.RegularShape({
                             fill: fill,
                             stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 10,
-                            radius: 7,
+                            points: 9,
+                            radius: 8,
                         })
 
                         break;

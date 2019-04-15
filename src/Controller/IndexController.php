@@ -2,12 +2,15 @@
 
 namespace App\Controller;
 
+use App\Command\FetchCommand;
 use App\Entity\Bike;
 use App\Entity\BikeEvent;
 use App\Entity\BikeStatus;
+use App\Entity\SystemVariable;
 use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
+use App\Repository\SystemVariableRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -31,6 +34,10 @@ class IndexController extends AbstractController
         $timespan = $request->query->get("hours", 24);
         $city = $request->query->get("city", null);
 
+        /** @var SystemVariableRepository $sysVarRepo */
+        $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);
+        $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
+
         $context = [
             "availableSummary" => $statusRepo->getAvailableSummary($timespan, $city),
             "lastSeenActive" => $bikeRepo->getLastSeenActive($timespan, $city),
@@ -50,6 +57,7 @@ class IndexController extends AbstractController
 
             "bikeDeclaration" => 1224,
             "timespan" => $timespan,
+            "lastUpdate" => $lastUpdateTimestamp->getValue(),
             "city" => $city,
             "knownCities" => $bikeRepo->getCities(),
         ];

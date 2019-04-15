@@ -13,7 +13,6 @@ class MevoClient
     const MEVO_MAP_PAGE_URL = "https://rowermevo.pl/mapa-stacji/";
     const MEVO_LOCATIONS_URL = "https://rowermevo.pl/locations.js";
     const MEVO_KEY_VAR = "mevo_key_var";
-    const REQUEST_TIME_RAGNE = 15;
 
     private $userAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
@@ -84,15 +83,10 @@ class MevoClient
     /**
      * Get locations.js file form mevo page
      *
-     * @param bool $wait
      * @return string
      */
-    private function fetchLocations($wait = true)
+    private function fetchLocations()
     {
-        if ($wait) {
-            sleep(rand(0,self::REQUEST_TIME_RAGNE));
-        }
-
         $curl = curl_init();
 
         curl_setopt_array($curl, [
@@ -108,7 +102,7 @@ class MevoClient
 
         if($respCode == 403) {
             $this->fetchKeyFromMevo();
-            return $this->fetchLocations(false);
+            return $this->fetchLocations();
         }
 
         return $resp;

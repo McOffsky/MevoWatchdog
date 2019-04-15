@@ -6,6 +6,7 @@ use App\Entity\Bike;
 use App\Entity\BikeEvent;
 use App\Entity\BikeRawStatus;
 use App\Entity\BikeStatus;
+use App\Entity\SystemVariable;
 use App\Repository\BikeRepository;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,6 +20,7 @@ use Exception;
 class FetchCommand extends Command
 {
     const LOCATION_CHANGE_TRESHOLD = 20; //m
+    const UPDATE_TIMESTAMP_NAME = "update_timestamp";
 
     protected static $defaultName = 'mevo:fetch';
 
@@ -81,7 +83,7 @@ class FetchCommand extends Command
     {
         $now = $this->getNow();
 
-        if ($bike->getBattery() <= 60 && $bike->getBattery() > 0 && $status->getBattery() > 85) {
+        if ($bike->getBattery() <= 65 && $status->getBattery() > 85) {
             $bikeReloadedEvent = new BikeEvent();
             $bikeReloadedEvent->setType(BikeEvent::NEW_BATTERY);
             $bikeReloadedEvent->setTimestamp($now->getTimestamp());
@@ -91,7 +93,7 @@ class FetchCommand extends Command
             $this->em->persist($bikeReloadedEvent);
         }
 
-        if ($bike->getBattery() > 20 && $status->getBattery() <= 20 && $status->getBattery() > 0) {
+        if ($bike->getBattery() > 20 && $status->getBattery() <= 20) {
             $bikeDepletedEvent = new BikeEvent();
             $bikeDepletedEvent->setType(BikeEvent::DEPLETED_BATTERY);
             $bikeDepletedEvent->setTimestamp($now->getTimestamp());
@@ -102,7 +104,7 @@ class FetchCommand extends Command
             return;
         }
 
-        if ($bike->getBattery() > 30 && $status->getBattery() <= 30 && $status->getBattery() > 0) {
+        if ($bike->getBattery() > 30 && $status->getBattery() <= 30) {
             $bikeLowEvent = new BikeEvent();
             $bikeLowEvent->setType(BikeEvent::LOW_BATTERY);
             $bikeLowEvent->setTimestamp($now->getTimestamp());
@@ -132,12 +134,11 @@ class FetchCommand extends Command
             || ($lastStatus->getBattery() - 5) >= $status->getBattery()
             || $lastStatus->getLocation() != $status->getLocation()
             || $lastStatus->getTimestamp() < $this->getStatusAgeLimit()->getTimestamp())
-            && $status->getBattery() > 0
         ) {
             $bikeStatus = new BikeStatus();
             $bikeStatus->setBikeCode($bike->getCode());
-            $bikeStatus->setBattery($status->getBattery());
             $bikeStatus->setTimestamp($now->getTimestamp());
+            $bikeStatus->setBattery($status->getBattery());
             $bikeStatus->setLocation($status->getLocation());
             $bikeStatus->setCity($status->getCity());
 
@@ -181,6 +182,22 @@ class FetchCommand extends Command
     }
 
     /**
+     * @throws ORMException
+     */
+    private function generateUpdateTimestamp()
+    {
+        $lastFetchTimestamp = $this->em->getRepository(SystemVariable::class)->findOneBy(['name' => self::UPDATE_TIMESTAMP_NAME]);
+
+        if (empty($lastFetchTimestamp)) {
+            $lastFetchTimestamp = new SystemVariable();
+            $lastFetchTimestamp->setName(self::UPDATE_TIMESTAMP_NAME);
+        }
+
+        $lastFetchTimestamp->setValue($this->getNow()->getTimestamp());
+        $this->em->persist($lastFetchTimestamp);
+    }
+
+    /**
      * @param InputInterface $input
      * @param OutputInterface $output
      *
@@ -206,6 +223,11 @@ class FetchCommand extends Command
                 $bike = new Bike();
                 $bike->setCode($code);
             } else {
+                // Bikes sometimes report 0 battery for no reason. If that occurs, use last known battery level instead.
+                if ($status->getBattery() == 0 && !empty($bike->getBattery())) {
+                    $status->setBattery($bike->getBattery());
+                }
+
                 $this->readEvents($bike,$status);
             }
 
@@ -217,6 +239,8 @@ class FetchCommand extends Command
             $bike->setLocation($status->getLocation());
             $this->em->persist($bike);
         }
+
+        $this->generateUpdateTimestamp();
 
         $this->em->flush();
 
