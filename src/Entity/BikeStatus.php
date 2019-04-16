@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\BikeStatusRepository")
- * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"bikeCode"}), @ORM\Index(name="timestamp_idx", columns={"timestamp"}), @ORM\Index(name="city_idx", columns={"city"}), @ORM\Index(name="locationChange_idx", columns={"locationChange"})})
+ * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"bikeCode"}), @ORM\Index(name="timestamp_idx", columns={"timestamp"}), @ORM\Index(name="city_idx", columns={"city"}), @ORM\Index(name="location_idx", columns={"location"}), @ORM\Index(name="locationChange_idx", columns={"locationChange"})})
  */
 class BikeStatus
 {

@@ -5,6 +5,7 @@ namespace App\API;
 
 
 use App\Entity\BikeRawStatus;
+use App\Entity\RawStation;
 use App\Entity\SystemVariable;
 use Doctrine\ORM\EntityManager;
 
@@ -63,6 +64,18 @@ class MevoClient
         $bikesInSystem = [];
 
         foreach ($stations[0]->places as $station) {
+            $stationStatus = null;
+
+            if (!$station->bike && $station->spot) {
+                $stationStatus = new RawStation();
+                $stationStatus->setName($station->name);
+                $stationStatus->setLat($station->lat);
+                $stationStatus->setLng($station->lng);
+                $stationStatus->setCity($station->city);
+                $stationStatus->setRacks($station->bike_racks);
+                $stationStatus->setFreeRacks($station->free_racks);
+            }
+
             if (!empty($station->bike_list)) {
                 foreach ($station->bike_list as $bike) {
                     $bikeStatus = new BikeRawStatus();
@@ -71,6 +84,7 @@ class MevoClient
                     $bikeStatus->setCity($station->city);
                     $bikeStatus->setLat($station->lat);
                     $bikeStatus->setLng($station->lng);
+                    $bikeStatus->setStation($stationStatus);
 
                     $bikesInSystem[$bike->number] = $bikeStatus;
                 }

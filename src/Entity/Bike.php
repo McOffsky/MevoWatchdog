@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\BikeRepository")
- * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"code"}), @ORM\Index(name="city_idx", columns={"lastSeenCity"}), @ORM\Index(name="seen_idx", columns={"lastSeenTimestamp"})})
+ * @ORM\Table(indexes={@ORM\Index(name="code_idx", columns={"code"}), @ORM\Index(name="city_idx", columns={"lastSeenCity"}), @ORM\Index(name="location_idx", columns={"location"}), @ORM\Index(name="seen_idx", columns={"lastSeenTimestamp"})})
  */
 class Bike
 {

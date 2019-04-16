@@ -2,16 +2,12 @@
 
 namespace App\Entity;
 
-class BikeRawStatus
+class RawStation
 {
     /**
      * @var string
      */
-    private $code;
-    /**
-     * @var integer
-     */
-    private $battery;
+    private $name;
     /**
      * @var string
      */
@@ -25,40 +21,60 @@ class BikeRawStatus
      */
     private $lng;
     /**
-     * @var RawStation
+     * @var integer
      */
-    private $station;
+    private $racks;
+    /**
+     * @var integer
+     */
+    private $freeRacks;
 
     /**
      * @return string
      */
-    public function getCode(): string
+    public function getName(): string
     {
-        return $this->code;
+        return $this->name;
     }
 
     /**
-     * @param string $code
+     * @param string $name
      */
-    public function setCode(string $code): void
+    public function setName(string $name): void
     {
-        $this->code = $code;
+        $this->name = $name;
     }
 
     /**
      * @return int
      */
-    public function getBattery(): int
+    public function getRacks(): int
     {
-        return $this->battery;
+        return $this->racks;
     }
 
     /**
-     * @param int $battery
+     * @param int $racks
      */
-    public function setBattery(int $battery): void
+    public function setRacks(int $racks): void
     {
-        $this->battery = $battery;
+        $this->racks = $racks;
+    }
+
+    /**
+     * @return int
+     */
+    public function getFreeRacks(): int
+    {
+        return $this->freeRacks;
+    }
+
+    /**
+     * @param int $freeRacks
+     */
+    public function setFreeRacks(int $freeRacks): void
+    {
+        $this->freeRacks = $freeRacks;
     }
 
     /**
@@ -114,21 +130,4 @@ class BikeRawStatus
     {
         return "".$this->lat."|".$this->lng;
     }
-
-    /**
-     * @return RawStation
-     */
-    public function getStation(): ?RawStation
-    {
-        return $this->station;
-    }
-
-    /**
-     * @param RawStation $station
-     */
-    public function setStation(?RawStation $station): void
-    {
-        $this->station = $station;
-    }
-
 }
