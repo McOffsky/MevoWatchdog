@@ -24,10 +24,6 @@ class BikeRawStatus
      * @var float
      */
     private $lng;
-    /**
-     * @var RawStation
-     */
-    private $station;
 
     /**
      * @return string
@@ -114,21 +110,4 @@ class BikeRawStatus
     {
         return "".$this->lat."|".$this->lng;
     }
-
-    /**
-     * @return RawStation
-     */
-    public function getStation(): ?RawStation
-    {
-        return $this->station;
-    }
-
-    /**
-     * @param RawStation $station
-     */
-    public function setStation(?RawStation $station): void
-    {
-        $this->station = $station;
-    }
-
 }

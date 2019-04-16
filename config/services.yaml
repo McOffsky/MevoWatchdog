@@ -35,6 +35,14 @@ services:
         tags:
             - { name: 'console.command', command: 'mevo:fetch' }
 
+    App\Command\FetchStationsCommand:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@App\API\MevoClient'
+            - '@App\API\GdzieJestMevoClient'
+        tags:
+            - { name: 'console.command', command: 'mevo:fetch:stations' }
+
     App\API\MevoClient:
         arguments:
             - '@doctrine.orm.entity_manager'

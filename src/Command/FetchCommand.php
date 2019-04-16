@@ -6,8 +6,6 @@ use App\Entity\Bike;
 use App\Entity\BikeEvent;
 use App\Entity\BikeRawStatus;
 use App\Entity\BikeStatus;
-use App\Entity\RawStation;
-use App\Entity\Station;
 use App\Entity\SystemVariable;
 use App\Repository\BikeRepository;
 use Symfony\Component\Console\Command\Command;
@@ -199,30 +197,6 @@ class FetchCommand extends Command
         $this->em->persist($lastFetchTimestamp);
     }
 
-
-    /**
-     * @param RawStation[] $rawStations
-     * @throws ORMException
-     */
-    private function updateStations($rawStations)
-    {
-        $stationRepo = $this->em->getRepository(Station::class);
-
-        foreach($rawStations as $name => $rawStation) {
-            $station = $stationRepo->findOneBy(["name" => $name]);
-
-            if (empty($station)) {
-                $station = new Station();
-                $station->setName($rawStation->getName());
-                $station->setCity($rawStation->getCity());
-                $station->setRacks($rawStation->getRacks());
-                $station->setLocation($rawStation->getLocation());
-
-                $this->em->persist($station);
-            }
-        }
-    }
-
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
@@ -235,14 +209,13 @@ class FetchCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $bikesStatuses = $this->mevoClient->fetchBikes();
-        $reportedStations = [];
+        $bikes = $this->mevoClient->fetchBikes();
 
         /** @var BikeRepository $bikeRepo */
         $bikeRepo = $this->em->getRepository(Bike::class);
 
         /** @var BikeRawStatus $status */
-        foreach($bikesStatuses as $code => $status) {
+        foreach($bikes as $code => $status) {
             $bike = $bikeRepo->findBike($code);
             $now = $this->getNow();
 
@@ -259,12 +232,6 @@ class FetchCommand extends Command
             }
 
             $this->readStatus($bike,$status);
-
-            if (!empty($status->getStation())){
-                $station = $status->getStation();
-                $reportedStations[$station->getName()] = $station;
-            }
-
             $bike->setLastSeenTimestamp($now->getTimestamp());
             $bike->setLastSeenCity($status->getCity());
             $bike->setBattery($status->getBattery());
@@ -272,11 +239,10 @@ class FetchCommand extends Command
             $this->em->persist($bike);
         }
 
-        $this->updateStations($reportedStations);
         $this->generateUpdateTimestamp();
 
         $this->em->flush();
 
-        echo count($bikesStatuses)."\n";
+        echo count($bikes)."\n";
     }
 }

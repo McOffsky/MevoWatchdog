@@ -1,8 +1,6 @@
 <?php
 
-
 namespace App\API;
-
 
 use App\Entity\BikeRawStatus;
 use App\Entity\RawStation;
@@ -64,18 +62,6 @@ class MevoClient
         $bikesInSystem = [];
 
         foreach ($stations[0]->places as $station) {
-            $stationStatus = null;
-
-            if (!$station->bike && $station->spot) {
-                $stationStatus = new RawStation();
-                $stationStatus->setName($station->name);
-                $stationStatus->setLat($station->lat);
-                $stationStatus->setLng($station->lng);
-                $stationStatus->setCity($station->city);
-                $stationStatus->setRacks($station->bike_racks);
-                $stationStatus->setFreeRacks($station->free_racks);
-            }
-
             if (!empty($station->bike_list)) {
                 foreach ($station->bike_list as $bike) {
                     $bikeStatus = new BikeRawStatus();
@@ -84,7 +70,6 @@ class MevoClient
                     $bikeStatus->setCity($station->city);
                     $bikeStatus->setLat($station->lat);
                     $bikeStatus->setLng($station->lng);
-                    $bikeStatus->setStation($stationStatus);
 
                     $bikesInSystem[$bike->number] = $bikeStatus;
                 }
@@ -92,6 +77,41 @@ class MevoClient
         }
 
         return $bikesInSystem;
+    }
+
+    /**
+     * Read bikes from Mevo response. Returns array, bike ID is an array key.
+     *
+     * @param $locations
+     * @return array
+     */
+    public function fetchStations()
+    {
+        $locations = $this->fetchLocations();
+
+        $matches = [];
+
+        preg_match_all("/'(.*)'/imU", $locations, $matches);
+
+        $stations = json_decode($matches[1][0]);
+
+        $stationsInSystem = [];
+
+        foreach ($stations[0]->places as $station) {
+            if (!$station->bike && $station->spot) {
+                $stationStatus = new RawStation();
+                $stationStatus->setUid($station->uid);
+                $stationStatus->setCode($station->name);
+                $stationStatus->setLat($station->lat);
+                $stationStatus->setLng($station->lng);
+                $stationStatus->setCity($station->city);
+                $stationStatus->setRacks($station->bike_racks);
+                $stationStatus->setFreeRacks($station->free_racks);
+                $stationsInSystem[$station->name] = $stationStatus;
+            }
+        }
+
+        return $stationsInSystem;
     }
 
     /**

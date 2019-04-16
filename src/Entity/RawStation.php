@@ -5,9 +5,13 @@ namespace App\Entity;
 class RawStation
 {
     /**
+     * @var integer
+     */
+    private $uid;
+    /**
      * @var string
      */
-    private $name;
+    private $code;
     /**
      * @var string
      */
@@ -28,22 +32,6 @@ class RawStation
      * @var integer
      */
     private $freeRacks;
-
-    /**
-     * @return string
-     */
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    /**
-     * @param string $name
-     */
-    public function setName(string $name): void
-    {
-        $this->name = $name;
-    }
 
     /**
      * @return int
@@ -129,5 +117,37 @@ class RawStation
     public function getLocation(): string
     {
         return "".$this->lat."|".$this->lng;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCode(): string
+    {
+        return $this->code;
+    }
+
+    /**
+     * @param string $code
+     */
+    public function setCode(string $code): void
+    {
+        $this->code = $code;
+    }
+
+    /**
+     * @return int
+     */
+    public function getUid(): int
+    {
+        return $this->uid;
+    }
+
+    /**
+     * @param int $uid
+     */
+    public function setUid(int $uid): void
+    {
+        $this->uid = $uid;
     }
 }

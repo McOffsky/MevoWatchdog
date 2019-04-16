@@ -86,10 +86,13 @@
                             <td>Liczba wymienionych baterii w ciągu ostatnich {{ timespan }}h:</td>
                             <td style="width: 25%; text-align: left;"><strong>{{ replacedBatteryCount }}</strong></td>
                         </tr>
-                        <tr>
-                            <td>Liczba rowerów zapisanych w bazie Mevo Watchdog:</td>
-                            <td style="width: 25%; text-align: left;"><strong>{{ knownBikesCount }}</strong></td>
-                        </tr>
+
+                        {% if city is empty %}
+                            <tr>
+                                <td>Liczba rowerów zapisanych w bazie Mevo Watchdog:</td>
+                                <td style="width: 25%; text-align: left;"><strong>{{ knownBikesCount }}</strong></td>
+                            </tr>
+                        {% endif %}
                     </table>
                     <hr/>
                 </div>

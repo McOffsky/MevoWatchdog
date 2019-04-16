@@ -174,7 +174,7 @@ class BikeRepository extends ServiceEntityRepository
             $summary[($i-1)."h - ".$i."h"] = $this->countByActivity("-".$i."hours", "-".($i-1)."hours", $city);
         }
 
-        $summary["> ".($i-1)."h"] = $this->countByActivity("-1week", "-".$i."hours", $city);
+        $summary["> ".($i-1)."h"] = $this->countByActivity("-1year", "-".$i."hours", $city);
 
         return $summary;
     }
