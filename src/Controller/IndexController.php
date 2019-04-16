@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class IndexController extends AbstractController
 {
     /**
-    * @Route("/")
+    * @Route("/", name="charts_view")
     */
     public function index(Request $request)
     {
@@ -31,8 +31,12 @@ class IndexController extends AbstractController
         /** @var BikeEventRepository $eventRepo */
         $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
 
-        $timespan = $request->query->get("hours", 24);
-        $city = $request->query->get("city", null);
+        $timespan = $request->query->get("h", 24);
+        $city = $request->query->get("c", null);
+
+        if ($bikeCode = $request->query->get("bike", false)) {
+            return $this->redirectToRoute("bike_view", ['code' => $bikeCode]);
+        }
 
         /** @var SystemVariableRepository $sysVarRepo */
         $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);

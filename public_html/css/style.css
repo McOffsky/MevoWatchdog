@@ -1,0 +1,63 @@
+.scrollableTable tbody {
+    display: block;
+    overflow: auto;
+    max-height: 600px;
+}
+
+.scrollableTable thead, .scrollableTable tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.scrollableTable thead {
+    width: calc(100% - 1em)
+}
+
+.form-group select {
+    text-align: center;
+}
+
+.event_low_battery {
+    background: #e0d2a7;
+}
+
+.event_depleted_battery {
+    background: #f4a59e;
+}
+
+.event_new_battery {
+    background: #b4f4b0;
+}
+
+body .popover {
+    max-width: 400px;
+}
+
+body .navbar {
+    background: #EA5144;
+}
+
+body .navbar .main-menu .nav-item .nav-link i {
+    margin-right: 0.5em;
+}
+
+body .navbar .nav-item.facebook-link a i {
+    font-size: 1.65em;
+    vertical-align: sub;
+    margin-right: 1em;
+    margin-left: 0.15em;
+}
+
+.logo_wrapper .logo {
+    display: block;
+    padding-bottom: 2em;
+    text-decoration: none !important;
+    text-align: center;
+    width: 260px;
+    margin: 0 auto;
+}
+
+.logo_wrapper .motto {
+    padding-bottom: 2em;
+}

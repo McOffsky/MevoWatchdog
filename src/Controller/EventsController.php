@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class EventsController extends AbstractController
 {
     /**
-     * @Route("/events", name="events_view")
+     * @Route("/dziennik-zdarzen", name="events_view")
      */
     public function bike(Request $request)
     {
@@ -25,9 +25,13 @@ class EventsController extends AbstractController
         /** @var BikeEventRepository $eventRepo */
         $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
 
-        $timespan = $request->query->get("hours", 24);
-        $city = $request->query->get("city", null);
-        $type = $request->query->get("type", null);
+        $timespan = $request->query->get("h", 24);
+        $city = $request->query->get("c", null);
+        $type = $request->query->get("t", null);
+
+        if ($bikeCode = $request->query->get("bike", false)) {
+            return $this->redirectToRoute("bike_view", ['code' => $bikeCode]);
+        }
 
         $context = [
             "events" => $eventRepo->getEvents($timespan, $city, $type),
