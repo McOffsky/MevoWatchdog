@@ -2,11 +2,6 @@
 
 namespace App\API;
 
-use App\Entity\BikeRawStatus;
-use App\Entity\RawStation;
-use App\Entity\SystemVariable;
-use Doctrine\ORM\EntityManager;
-
 class GdzieJestMevoClient
 {
     const STATION_NAMES_ENDPOINT = "https://gdziejestmevo.pl/stationNames.json";

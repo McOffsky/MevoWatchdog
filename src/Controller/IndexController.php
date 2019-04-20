@@ -11,11 +11,10 @@ use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
 use App\Repository\SystemVariableRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-class IndexController extends AbstractController
+class IndexController extends BaseController
 {
     /**
     * @Route("/", name="charts_view")
@@ -34,8 +33,8 @@ class IndexController extends AbstractController
         $timespan = $request->query->get("h", 24);
         $city = $request->query->get("c", null);
 
-        if ($bikeCode = $request->query->get("bike", false)) {
-            return $this->redirectToRoute("bike_view", ['code' => $bikeCode]);
+        if ($redirect = $this->getRedirect($request)) {
+            return $redirect;
         }
 
         /** @var SystemVariableRepository $sysVarRepo */

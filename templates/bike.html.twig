@@ -1,4 +1,5 @@
 {% extends "base.html.twig" %}
+{% block title %}Rower {{ bike.code }} | {% endblock %}
 
 {% block content %}
     <div class="container" style="max-width: 100%;">
@@ -218,6 +219,8 @@
                 });
             }
 
+            labels.push('<a href="/?location=' + value.location + '"><strong>Szukaj stacji >></a>');
+
             mapPoints.push(new ol.Feature({
                 geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
                 label: labels.join("<br/>"),
@@ -298,7 +301,6 @@
                 })];
             }
         });
-
 
         var path = new ol.geom.LineString({{ locationHistory|json_encode|raw }});
         path.transform('EPSG:4326', 'EPSG:3857');

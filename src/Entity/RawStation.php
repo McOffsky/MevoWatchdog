@@ -31,7 +31,11 @@ class RawStation
     /**
      * @var integer
      */
-    private $freeRacks;
+    private $bikes;
+    /**
+     * @var integer
+     */
+    private $bookedBikes;
 
     /**
      * @return int
@@ -47,22 +51,6 @@ class RawStation
     public function setRacks(int $racks): void
     {
         $this->racks = $racks;
-    }
-
-    /**
-     * @return int
-     */
-    public function getFreeRacks(): int
-    {
-        return $this->freeRacks;
-    }
-
-    /**
-     * @param int $freeRacks
-     */
-    public function setFreeRacks(int $freeRacks): void
-    {
-        $this->freeRacks = $freeRacks;
     }
 
     /**
@@ -149,5 +137,37 @@ class RawStation
     public function setUid(int $uid): void
     {
         $this->uid = $uid;
+    }
+
+    /**
+     * @return int
+     */
+    public function getBikes(): int
+    {
+        return $this->bikes;
+    }
+
+    /**
+     * @param int $bikes
+     */
+    public function setBikes(int $bikes): void
+    {
+        $this->bikes = $bikes;
+    }
+
+    /**
+     * @return int
+     */
+    public function getBookedBikes(): int
+    {
+        return $this->bookedBikes;
+    }
+
+    /**
+     * @param int $bookedBikes
+     */
+    public function setBookedBikes(int $bookedBikes): void
+    {
+        $this->bookedBikes = $bookedBikes;
     }
 }

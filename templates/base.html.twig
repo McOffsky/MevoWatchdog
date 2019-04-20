@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="keywords" content="Rower, mevo, trójmiasto, gdańsk, sopot, gdynia, rowery elektryczne, watchdog">
-    <title>Mevo Watchdog</title>
+    <title>{% block title %}{% endblock %}Mevo Watchdog</title>
 
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-40170975-3"></script>
     <script>
@@ -15,7 +15,7 @@
     </script>
 
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/style.css?v02" rel="stylesheet">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
@@ -56,9 +56,8 @@
             <a class="nav-link" href="{{ path("events_view") }}"><i class="fas fa-calendar-check"></i>Dziennik zdarzeń</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#"><i class="fas fa-map-marker-alt"></i>Stacje (wkrótce)</a>
+            <a class="nav-link" href="{{ path("stations_map_view") }}"><i class="fas fa-map-marker-alt"></i>Stacje</a>
           </li>
-
           <li class="nav-item">
             <a class="nav-link" href="https://gdziejestmevo.pl"><i class="fas fa-bicycle"></i></i>Gdzie jest Mevo?</a>
           </li>
@@ -84,6 +83,11 @@
 
     </nav>
     <!--/.Navbar-->
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
 
     {% block content %}
     {% endblock %}

@@ -8,11 +8,10 @@ use App\Entity\BikeStatus;
 use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-class BikeController extends AbstractController
+class BikeController extends BaseController
 {
     /**
      * @Route("/rower/{code}", name="bike_view")
@@ -30,12 +29,20 @@ class BikeController extends AbstractController
 
         $timespan = $request->query->get("h", 24);
 
-        if ($bikeCode = $request->query->get("bike", false)) {
-            return $this->redirectToRoute("bike_view", ['code' => $bikeCode]);
+        if ($redirect = $this->getRedirect($request)) {
+            return $redirect;
+        }
+
+        $bike = $bikeRepo->findBike($code);
+
+        if (empty($bike)) {
+            $referer = $request->headers->get('referer', '/');
+            $request->getSession()->getFlashBag()->add('error', "Nie znaleziono roweru o numerze: ".$code);
+            return $this->redirect($referer);
         }
 
         $context = [
-            'bike' => $bikeRepo->findBike($code),
+            'bike' => $bike,
             'events' => $eventRepo->getBikeEvents($code, $timespan),
             'mapPoints' => $this->compileMapPoints($timespan, $code),
             'locationHistory' => $statusRepo->getBikeLocationHistory($code, $timespan),

@@ -4,20 +4,17 @@ namespace App\Controller;
 
 use App\Entity\Bike;
 use App\Entity\BikeEvent;
-use App\Entity\BikeStatus;
 use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
-use App\Repository\BikeStatusRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-class EventsController extends AbstractController
+class EventsController extends BaseController
 {
     /**
      * @Route("/dziennik-zdarzen", name="events_view")
      */
-    public function bike(Request $request)
+    public function events(Request $request)
     {
         /** @var BikeRepository $bikeRepo */
         $bikeRepo = $this->getDoctrine()->getRepository(Bike::class);
@@ -29,8 +26,8 @@ class EventsController extends AbstractController
         $city = $request->query->get("c", null);
         $type = $request->query->get("t", null);
 
-        if ($bikeCode = $request->query->get("bike", false)) {
-            return $this->redirectToRoute("bike_view", ['code' => $bikeCode]);
+        if ($redirect = $this->getRedirect($request)) {
+            return $redirect;
         }
 
         $context = [

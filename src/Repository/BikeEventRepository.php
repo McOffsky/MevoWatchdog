@@ -85,6 +85,25 @@ class BikeEventRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param string $location
+     * @param int $timespan
+     * @return array
+     */
+    public function getLocationEvents($location, $timespan)
+    {
+        $from = $this->getTime("-" . $timespan . " hours");
+
+        $qb = $this->createQueryBuilder('be')
+            ->where('be.timestamp >= :from')
+            ->andWhere('be.location = :location')
+            ->setParameter('location', $location)
+            ->setParameter('from', $from)
+            ->orderBy('be.timestamp', "DESC");
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * @param int $timespan
      * @param string $city
      * @param string $type

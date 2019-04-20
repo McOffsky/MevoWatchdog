@@ -34,4 +34,5 @@ dphp bin/console doctrine:schema:update --force
 ```
 
 Go to `localhost:8880` to see if it works. If page shows up, use `dphp bin/console mevo:fetch` to get fresh data about bikes.
+Run `dphp bin/console mevo:fetch:stations` to fetch stations data.
 Cronjob for that command is embeded in php container, it will fire up every 5 minutes.

@@ -13,9 +13,6 @@ use Doctrine\ORM\ORMException;
 
 class FetchStationsCommand extends Command
 {
-    const LOCATION_CHANGE_TRESHOLD = 20; //m
-    const UPDATE_TIMESTAMP_NAME = "update_timestamp";
-
     protected static $defaultName = 'mevo:fetch:stations';
 
     /**
@@ -67,6 +64,8 @@ class FetchStationsCommand extends Command
             $station->setCode($rawStation->getCode());
             $station->setCity($rawStation->getCity());
             $station->setRacks($rawStation->getRacks());
+            $station->setBikes($rawStation->getBikes());
+            $station->setBookedBikes($rawStation->getBookedBikes());
             $station->setLocation($rawStation->getLocation());
 
             if (!empty($stationNames[$rawStation->getUid()])) {

@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\StationRepository")
- * @ORM\Table(indexes={@ORM\Index(name="location_idx", columns={"location"}), @ORM\Index(name="name_idx", columns={"name"}), @ORM\Index(name="city_idx", columns={"city"})})
+ * @ORM\Table(indexes={@ORM\Index(name="location_idx", columns={"location"}), @ORM\Index(name="code_idx", columns={"code"}), @ORM\Index(name="city_idx", columns={"city"})})
  */
 class Station
 {
@@ -38,14 +38,24 @@ class Station
     private $racks;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
-     */
-    private $freeRacks;
-
-    /**
      * @ORM\Column(type="string", length=50)
      */
     private $code;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $bikes;
+
+    /**
+     * @var integer
+     */
+    private $bikeCount;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $bookedBikes;
 
     public function getId(): ?int
     {
@@ -111,18 +121,6 @@ class Station
         return $this;
     }
 
-    public function getFreeRacks(): ?int
-    {
-        return $this->freeRacks;
-    }
-
-    public function setFreeRacks(?int $freeRacks): self
-    {
-        $this->freeRacks = $freeRacks;
-
-        return $this;
-    }
-
     public function getCode(): ?string
     {
         return $this->code;
@@ -131,6 +129,42 @@ class Station
     public function setCode(string $code): self
     {
         $this->code = $code;
+
+        return $this;
+    }
+
+    public function getBikes(): ?int
+    {
+        return $this->bikes;
+    }
+
+    public function setBikes(?int $bikes): self
+    {
+        $this->bikes = $bikes;
+
+        return $this;
+    }
+
+    public function getBikeCount(): int
+    {
+        return $this->bikeCount;
+    }
+
+    public function setBikeCount(int $bikeCount): self
+    {
+        $this->bikeCount = $bikeCount;
+
+        return $this;
+    }
+
+    public function getBookedBikes(): ?int
+    {
+        return $this->bookedBikes;
+    }
+
+    public function setBookedBikes(?int $bookedBikes): self
+    {
+        $this->bookedBikes = $bookedBikes;
 
         return $this;
     }

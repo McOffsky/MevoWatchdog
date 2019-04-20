@@ -132,6 +132,7 @@ class BikeStatusRepository extends ServiceEntityRepository
                 $points[$key] = [
                     "visit" => [],
                     "loc" => $status->getLoc(),
+                    "location" => $status->getLocation(),
                 ];
             }
 
@@ -163,9 +164,11 @@ class BikeStatusRepository extends ServiceEntityRepository
      * @param string $to
      * @param string $city
      * @param int $batteryCutoff
+     * @param string $location
      * @return integer
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    private function getActiveCount($from="-1 hour", $to = "now", $city = null, $batteryCutoff = 0)
+    private function getActiveCount($from="-1 hour", $to = "now", $city = null, $batteryCutoff = 0, $location = null)
     {
         $qb = $this->createQueryBuilder('bs')
             ->select("COUNT(DISTINCT bs.bikeCode)")
@@ -181,6 +184,11 @@ class BikeStatusRepository extends ServiceEntityRepository
         if (!empty($city)) {
             $qb->andWhere('bs.city = :city')
                 ->setParameter('city', $city);
+        }
+
+        if (!empty($location)) {
+            $qb->andWhere('bs.location = :location')
+                ->setParameter('location', $location);
         }
 
         return $qb
@@ -273,6 +281,46 @@ class BikeStatusRepository extends ServiceEntityRepository
         return $statusQB->getQuery()->getSingleScalarResult();
     }
 
+
+    /**
+     * @param string $form
+     * @param string $to
+     * @param string $city
+     * @param integer $limit
+     * @return array
+     */
+    public function getBikeCountByLocation($form, $to, $city = null, $limit = null)
+    {
+        $statusQB = $this->createQueryBuilder('bs')
+            ->select('bs.location, COUNT(DISTINCT(bs.bikeCode)) AS cnt')
+            ->groupBy("bs.location")
+            ->andWhere('bs.timestamp > :from')
+            ->andWhere('bs.timestamp < :to')
+            ->setParameter('from', $this->getTime($form))
+            ->setParameter('to', $this->getTime($to))
+            ->orderBy('cnt', "DESC")
+        ;
+
+        if (!empty($city)) {
+            $statusQB->andWhere('bs.city = :city')
+                ->setParameter('city', $city);
+        }
+
+        if (!empty($limit)) {
+            $statusQB->setMaxResults($limit);
+        }
+
+        $result = $statusQB->getQuery()->getArrayResult();
+
+        $return = [];
+
+        foreach ($result as $val) {
+            $return[$val['location']] = intval($val['cnt']);
+        }
+
+        return $return;
+    }
+
     /**
      * @param int $timespan
      * @param string $city
@@ -310,5 +358,150 @@ class BikeStatusRepository extends ServiceEntityRepository
 
 
         return $summary;
+    }
+
+    /**
+     * @param string $location
+     * @param int $timespan
+     * @return array
+     */
+    public function getLocationSummary($location, $timespan = 12)
+    {
+        $summary = [];
+
+        for ($i = 0; $i < $timespan; $i++) {
+            $time = new DateTime("-" . $i . "hours");
+            $from = $time->format("H:00:00 d-m-Y");
+            $to = $time->format("H:59:59 d-m-Y");
+
+            $summary[$time->format("H:00-:59 / d-m")] = $this->getActiveCount($from, $to, null, self::BATTERY_CUTOFF_LEVEL, $location);
+        }
+
+
+        return $summary;
+    }
+
+    /**
+     * @param string $location
+     * @return integer
+     */
+    public function getBikesByLocation($timespan = 2, $location)
+    {
+        $qb = $this->createQueryBuilder('bs')
+            ->groupBy('bs.bikeCode')
+            ->andWhere('bs.location = :location')
+            ->andWhere('bs.battery > :cutoff')
+            ->andWhere('bs.timestamp > :from')
+            ->setParameter('from', $this->getTime("-".$timespan."hours"))
+            ->setParameter('location', $location)
+            ->setParameter('cutoff', self::BATTERY_CUTOFF_LEVEL)
+            ->orderBy('bs.timestamp', "DESC")
+        ;
+
+        /** @var BikeStatus $status */
+        return array_map(function($status) {
+                return $status->getBikeCode();
+            },
+            $qb->getQuery()->getResult()
+        );
+    }
+
+    /**
+     * @param string $location
+     * @param int $timespan
+     * @return array
+     */
+    public function getLocationConnections($location, $timespan = 12)
+    {
+        $statusQB = $this->createQueryBuilder('bs')
+            ->andWhere('bs.locationChange = :true')
+            ->andWhere('bs.location = :location')
+            ->andWhere('bs.timestamp > :from')
+            ->andWhere('bs.timestamp < :to')
+            ->setParameter('from', $this->getTime("-".$timespan."hours"))
+            ->setParameter('to', $this->getTime("now"))
+            ->setParameter('true', true)
+            ->setParameter('location', $location)
+            ->orderBy('bs.timestamp', "DESC")
+        ;
+
+        $bikeArrivals = $statusQB->getQuery()->getResult();
+
+        return $this->getBikeConnections($bikeArrivals);
+    }
+
+    /**
+     * @param BikeStatus[] $bikeStatus
+     * @return array
+     */
+    private function getBikeConnections(array $bikeStatusList)
+    {
+        $points = [];
+
+        foreach ($bikeStatusList as $bikeStatus) {
+            $statusID = $bikeStatus->getId();
+            $bikeCode = $bikeStatus->getBikeCode();
+            $location = $bikeStatus->getBikeCode();
+            $timestamp = $bikeStatus->getTimestamp() - 43200; // -12h
+
+            $rsm = $this->createResultSetMappingBuilder('bs');
+            $selectClause = $rsm->generateSelectClause(['bs']);
+
+            $sql = "
+                (SELECT $selectClause FROM BikeStatus as bs WHERE bs.id > $statusID AND bs.locationChange = true AND bs.bikeCode = $bikeCode ORDER BY bs.id LIMIT 1)
+                UNION
+                (SELECT $selectClause FROM BikeStatus as bs WHERE bs.id < $statusID AND bs.location != '$location' AND bs.bikeCode = $bikeCode AND bs.timestamp > $timestamp ORDER BY bs.id DESC LIMIT 1)
+            ";
+
+            $query = $this->getEntityManager()->createNativeQuery(
+                $sql,
+                $rsm
+            );
+
+            /** @var BikeStatus[] $result */
+            $result = $query->getResult();
+
+
+            // NEXT LOCATION
+            if (!empty($result[0]) && $bikeStatus->getLocation() != $result[0]->getLocation()) {
+                $nextLocation = $result[0]->getLocation();
+
+                if (empty($points[$nextLocation])) {
+                    $points[$nextLocation] = [
+                        "loc" => $result[0]->getLoc(),
+                        "location" => $result[0]->getLocation(),
+                        "bikes" => [],
+                    ];
+                }
+
+                $points[$nextLocation]["bikes"][] = [
+                    "type" => "dep",
+                    "time" => date('H:i / d-m', $result[0]->getTimestamp()),
+                    "bike" => $result[0]->getBikeCode(),
+                ];
+            }
+
+            // PREVIOUS LOCATION
+            if (!empty($result[1]) && $bikeStatus->getLocation() != $result[1]->getLocation()) {
+                $prevLocation = $result[1]->getLocation();
+
+                if (empty($points[$prevLocation])) {
+                    $points[$prevLocation] = [
+                        "loc" => $result[1]->getLoc(),
+                        "location" => $result[1]->getLocation(),
+                        "bikes" => [],
+                    ];
+                }
+
+                $points[$prevLocation]["bikes"][] = [
+                    "type" => "arr",
+                    "time" => date('H:i / d-m', $result[1]->getTimestamp()),
+                    "bike" => $result[1]->getBikeCode(),
+                ];
+            }
+
+        }
+
+        return array_values($points);
     }
 }

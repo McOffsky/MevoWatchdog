@@ -1,0 +1,357 @@
+{% extends "base.html.twig" %}
+{% block title %}Stacja {{ station.code }} | {% endblock %}
+
+{% block content %}
+    <div class="container" style="max-width: 100%;">
+
+        <div class="row">
+
+            <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 1.5em;">
+                <canvas id="availableSummaryChart" style="display: block; width: 100%; height: 350px;"></canvas>
+                <hr/>
+                <div id="map" style="width: 100%; min-height: 842px;"></div>
+            </div>
+
+            <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 1.5em;">
+                <div style="text-align: center; padding: 2em 0em 1em">
+                    {% include "logo.html.twig" %}
+                    <i>Ostatnia aktualizacja: <strong>{{ lastUpdate|date("H:i:s d-m-Y") }}</strong></i>
+                    <div class="col-lg-12 col-md-12 order-md-1 order-lg-1" style="padding-bottom: 1em;">
+                        {% set referer = app.request.headers.get('referer')|default('/') %}
+                        <a href="{{ referer }}">&lt;&lt; Wróć do poprzedniej strony</a>
+                    </div>
+
+                    <form method="GET">
+                        <div class="form-group row">
+                            <div class="col-md-5"></div>
+
+                            <div class="col-md-2">
+                                <select name="h" class="form-control" onchange="this.form.submit()">
+                                    {% for val in [1,3,6,12, 24, 48] %}
+                                        <option {% if timespan == val %}selected{% endif %} value="{{ val }}">
+                                            {{ val }}h
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-5"></div>
+                        </div>
+                    </form>
+                    <table style="margin: 0 auto;" class="table">
+                        <tr>
+                            <td>Kod identyfikacyjny stacji:</td>
+                            <td style="text-align: left;"><strong>{{ station.code }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Nazwa:</td>
+                            <td style="text-align: left;"><strong>{{ station.name|default() }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Koordynaty GPS:</td>
+                            <td style="text-align: left;"><strong>{{ station.location }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Miasto:</td>
+                            <td style="text-align: left;"><strong>{{ station.city }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ilość stojaków na rowery:</td>
+                            <td style="text-align: left;"><strong>{{ station.racks }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ilość rowerów aktualnie na stacji:</td>
+                            <td style="text-align: left;"><strong>{{ station.bikes }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ilość rowerów zarezerwowanych:</td>
+                            <td style="text-align: left;"><strong>{{ station.bookedBikes }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Ilość rowerów zalogowanych na stacji ({{ timespan }}h):</td>
+                            <td style="text-align: left;"><strong>{{ bikes|length }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+
+
+
+                <div class="">
+                    <h5>Dziennik zdarzeń stacji (ostatnie {{ timespan }}h):</h5>
+
+                    <div class="scrollableTable">
+                        <table class="table">
+                            <thead class="thead-light">
+                            <tr>
+                                <th scope="col" style="width: 15%;">Rower</th>
+                                <th scope="col" style="width: 45%;">Typ</th>
+                                <th scope="col" style="width: 20%;">Czas</th>
+                            </tr>
+                            </thead>
+                            <tbody style="min-height: 450px; max-height: 450px;">
+                            {% for event in events %}
+                                <tr class="event_{{ event.type }}">
+                                    <td style="width: 15%;">
+                                        <a href="{{ path("bike_view", {code: event.bikeCode}) }}">{{ event.bikeCode }}</a>
+                                    </td>
+                                    <td style="width: 45%;">
+                                        {{ event.type|trans }}
+                                    </td>
+                                    <td style="width: 20%;">{{ event.timestamp|date("H:i / d-m-Y") }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+
+
+                    </div>
+                </div>
+
+
+
+
+            </div>
+        </div>
+    </div>
+
+    <div id="popup"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>\
+
+    <script>
+        var availableSummaryChartData = {
+            labels: [],
+            datasets: [{
+                backgroundColor: "#EA5144",
+                data: []
+            }]
+        };
+
+        $.each({{ bikesSummary|json_encode|raw }}, function (key, value) {
+            availableSummaryChartData.labels.push(key);
+            availableSummaryChartData.datasets[0].data.push(value);
+        });
+
+        new Chart(document.getElementById("availableSummaryChart"), {
+            type: 'bar',
+            data: availableSummaryChartData,
+            options: {
+                legend: {display: false},
+                showDatapoints: true,
+                title: {
+                    display: true,
+                    text: 'Liczba rowerów dostępnych do wypożyczenia (bateria > 20%) zalogowanych na stacji w ciągu {{ timespan }} godzin'
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                        }
+                    }]
+                },
+                plugins: {
+                    labels: {
+                        render: 'value',
+                    }
+                }
+            }
+        });
+    </script>
+
+
+
+    <script>
+        let timeFormat = "HH:mm / DD-MM-YYYY";
+
+        let paths = [];
+        let mapPoints = [];
+
+        $.each({{ connections|json_encode|raw }}, function (key, value) {
+            let pointLabel = [];
+
+            let arrivalCount = 0;
+            let departureCount = 0;
+
+            pointLabel.push('<strong>Lokalizacja GPS:</strong> <a href="/?location='+value.location+'">'+value.location+'</a>');
+
+            $.each(value.bikes, function (bikeKey, bikeValue) {
+                let bikeLabel = " pojawienie się:";
+                if (bikeValue.type === "arr") {
+                    arrivalCount++;
+                    bikeLabel = " ostatnio widziany:";
+                } else if (bikeValue.type === "dep") {
+                    departureCount++;
+                }
+
+                pointLabel.push('<a href="/rower/' + bikeValue.bike + '">Rower ' + bikeValue.bike + '</a> - ' + bikeLabel + ' ' + bikeValue.time);
+            });
+
+            var path = new ol.geom.LineString([value.loc, {{ station.loc|json_encode|raw }}]);
+            var pathType = "arr";
+
+            if (departureCount > 0) {
+                pathType = "dep";
+            }
+
+            if (departureCount > 0 && arrivalCount > 0) {
+                pathType = "mixed";
+            }
+
+            path.transform('EPSG:4326', 'EPSG:3857');
+
+            paths.push(new ol.Feature({
+                geometry: path,
+                path_type: pathType,
+                name: 'Line'
+            }));
+
+            mapPoints.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: pointLabel.join("<br/>"),
+            }));
+        });
+
+        var pathLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: paths
+            }),
+            style: function(feature) {
+                let styles = [];
+
+                switch (feature.get("path_type")) {
+                    case "arr":
+                        styles.push(new ol.style.Style({
+                            stroke: new ol.style.Stroke({
+                                width: 3,
+                                color: "#384977",
+                            })
+                        }));
+                        break;
+                    case "dep":
+                        styles.push(new ol.style.Style({
+                            stroke: new ol.style.Stroke({
+                                width: 3,
+                                color: "#EA5144",
+                            })
+                        }));
+                        break;
+                    case "mixed":
+                        styles.push(new ol.style.Style({
+                            stroke: new ol.style.Stroke({
+                                width: 3,
+                                color: "#384977",
+                            })
+                        }));
+
+                        styles.push(new ol.style.Style({
+                            stroke: new ol.style.Stroke({
+                                width: 3,
+                                color: "#EA5144",
+                                lineDash: [10, 10]
+                            })
+                        }));
+                        break;
+                }
+
+                return styles;
+            }
+        });
+
+        let mapPointsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: mapPoints
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.RegularShape({
+                    fill: new ol.style.Fill({color: '#BFE3F0'}),
+                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                    points: 10,
+                    radius: 5,
+                })
+            })
+        });
+
+
+        let markerLabels = [];
+        let bikeLabels = [];
+
+        markerLabels.push("<strong>Stacja {{ station.code }}</strong>");
+        {% if station.name is not empty %}
+            markerLabels.push("{{ station.name }}");
+        {% endif %}
+        markerLabels.push("<strong>Zalogowane rowery ({{ timespan }}h):</strong> {{ bikes|length }}");
+
+        $.each({{ bikes|json_encode|raw }}, function (key, value) {
+            bikeLabels.push('<a href="/rower/' + value + '">' + value + '</a>');
+        });
+
+        markerLabels.push(bikeLabels.join(", "));
+
+        var markerLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: [new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat({{ station.loc|json_encode|raw }})),
+                    label: markerLabels.join("<br/>"),
+                })]
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.RegularShape({
+                    fill: new ol.style.Fill({color: '#384977'}),
+                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                    points: 15,
+                    radius: 10,
+                })
+            })
+        });
+
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                pathLayer,
+                mapPointsLayer,
+                markerLayer
+            ],
+
+            view: new ol.View({
+                center: ol.proj.fromLonLat({{ station.loc|json_encode|raw }}),
+                zoom: 13
+            })
+        });
+
+        var element = document.getElementById('popup');
+
+        var popup = new ol.Overlay({
+            element: element,
+            positioning: 'bottom-center',
+            stopEvent: false,
+            offset: [0, 0]
+        });
+
+        map.addOverlay(popup);
+
+        // display popup on click
+        map.on('pointermove', function (evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel,
+                function (feature) {
+                    return feature;
+                });
+
+            if (feature && feature.get('label')) {
+                var coordinates = feature.getGeometry().getCoordinates();
+                popup.setPosition(coordinates);
+
+                $(element).attr("data-content", feature.get('label'));
+                $(element).popover({
+                    placement: 'top',
+                    html: true
+                })
+                $(element).popover('show');
+            } else {
+                $(element).popover('hide');
+            }
+        });
+
+    </script>
+{% endblock %}

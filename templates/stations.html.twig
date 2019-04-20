@@ -1,0 +1,201 @@
+{% extends "base.html.twig" %}
+{% block title %}Stacje | {% endblock %}
+
+{% block content %}
+    <div class="container" style="max-width: 100%;">
+
+        <div class="row">
+
+            <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 1.5em;">
+                <div id="map" style="width: 100%; height: 96%; min-height: 600px;"></div>
+            </div>
+
+            <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 1.5em;">
+                <div style="text-align: center; padding: 2em 0em 1em">
+                    {% include "logo.html.twig" %}
+                    <i>Ostatnia aktualizacja: <strong>{{ lastUpdate|date("H:i:s d-m-Y") }}</strong></i>
+                    <form method="GET">
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+
+                            <div class="col-md-3">
+                                <select name="c" class="form-control" onchange="this.form.submit()">
+                                    <option value="">--Wybierz miasto--</option>
+                                    {% for val in knownCities %}
+                                        <option {% if city == val %}selected{% endif %}
+                                                value="{{ val }}">{{ val }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="h" class="form-control" onchange="this.form.submit()">
+                                    {% for val in [1,3,6,12, 24] %}
+                                        <option {% if timespan == val %}selected{% endif %} value="{{ val }}">
+                                            {{ val }}h
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-3"></div>
+                        </div>
+                    </form>
+                </div>
+                <h5>Najaktywniejsze stacje (ostatnie {{ timespan }}h):</h5>
+
+                <div class="">
+                    <table class="table">
+                        <thead class="thead-light">
+                        <tr>
+                            <th scope="col" style="width: 15%;">ID</th>
+                            <th scope="col">Lokacja</th>
+                            <th scope="col">Miasto</th>
+                            <th scope="col" style="width: 25%;">Zalogowane rowery ({{ timespan }}h)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for station in topStations|slice(0,10) %}
+                            <tr>
+                                <td style="width: 15%;">
+                                    <a href="{{ path("station_view", {"code":station.code}) }}">{{ station.code }}</a>
+                                </td>
+                                <td>
+                                    {{ station.name|default(station.location) }}
+                                </td>
+                                <td>
+                                    {{ station.city }}
+                                </td>
+                                <td style="width: 25%;">{{ station.bikeCount }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="popup"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
+    <script>
+        let timeFormat = "HH:mm / DD-MM-YYYY";
+
+        let points = [];
+
+        $.each({{ stationPoints|json_encode|raw }}, function (key, value) {
+            let labels = [];
+
+            if (value.name !== null) {
+                labels.push('<strong>' + value.name + '</strong>');
+            }
+
+            labels.push('<strong>Numer stacji:</strong> ' + value.code);
+            labels.push('<strong>GPS:</strong> ' + value.location);
+
+            labels.push('<strong>Rowery aktualnie na stacji:</strong>');
+            labels.push(value.bikes);
+            if (value.booked > 0) {
+                labels.push('<strong>Rowery zarezerwowane:</strong> '+value.booked);
+            }
+            labels.push('<strong>Stojaki rowerowe:</strong> '+value.racks);
+            labels.push();
+
+            labels.push('<strong>Rowery zalogowane na stacji ({{ timespan }}h):</strong>');
+            labels.push(value.bikeCount);
+
+            labels.push('<a href="/stacja/' + value.code + '"><strong>Zobacz więcej >></a>');
+
+            points.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                label: labels.join("<br/>"),
+                bike_count: value.bikeCount,
+                current_bikes: value.bikes,
+            }));
+
+        });
+
+        var pointsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: points
+            }),
+            style: function(feature) {
+                let size = 5 + (feature.get("bike_count")/2);
+                let fill = new ol.style.Fill({color: '#384977'});
+
+                if (feature.get("current_bikes") < 1) {
+                    fill = new ol.style.Fill({color: '#BFE3F0'});
+                }
+
+                if (size > 40) {
+                    size = 40;
+                }
+
+                return [new ol.style.Style({
+                    image: new ol.style.RegularShape({
+                        fill: fill,
+                        stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                        points: 20,
+                        radius: size,
+                    })
+                })];
+            }
+        });
+
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                pointsLayer,
+            ],
+
+            view: new ol.View({
+                {% if city is empty or stationPoints is empty %}
+                    center: ol.proj.fromLonLat([18.585843, 54.380577]),
+                    zoom: 9.5
+                {% else %}
+                    center: ol.proj.fromLonLat({{ stationPoints|first.loc|json_encode|raw }}),
+                    zoom: 11.75
+                {% endif %}
+            })
+        });
+
+        var element = document.getElementById('popup');
+
+        var popup = new ol.Overlay({
+            element: element,
+            positioning: 'bottom-center',
+            stopEvent: false,
+            offset: [0, 0]
+        });
+
+        map.addOverlay(popup);
+
+        // display popup on click
+        map.on('pointermove', function (evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel,
+                function (feature) {
+                    return feature;
+                });
+
+            if (feature && feature.get('label')) {
+                var coordinates = feature.getGeometry().getCoordinates();
+                popup.setPosition(coordinates);
+
+                $(element).attr("data-content", feature.get('label'));
+                $(element).popover({
+                    placement: 'top',
+                    html: true
+                })
+                $(element).popover('show');
+            } else {
+                $(element).popover('hide');
+            }
+        });
+
+    </script>
+{% endblock %}
