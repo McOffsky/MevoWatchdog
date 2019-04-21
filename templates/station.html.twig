@@ -207,6 +207,7 @@
             mapPoints.push(new ol.Feature({
                 geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
                 label: pointLabel.join("<br/>"),
+                point_size: value.bikes.length,
             }));
         });
 
@@ -260,14 +261,22 @@
             source: new ol.source.Vector({
                 features: mapPoints
             }),
-            style: new ol.style.Style({
-                image: new ol.style.RegularShape({
-                    fill: new ol.style.Fill({color: '#BFE3F0'}),
-                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                    points: 10,
-                    radius: 5,
+            style: function(feature) {
+                let size = 4 + feature.get("point_size");
+
+                if (size > 40) {
+                    size = 40;
+                }
+
+                return new ol.style.Style({
+                    image: new ol.style.RegularShape({
+                        fill: new ol.style.Fill({color: '#BFE3F0'}),
+                        stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                        points: 20,
+                        radius: size,
+                    })
                 })
-            })
+            }
         });
 
 
