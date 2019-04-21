@@ -29,7 +29,7 @@ class StationsController extends BaseController
         /** @var StationRepository $stationRepo */
         $stationRepo = $this->getDoctrine()->getRepository(Station::class);
 
-        $timespan = $request->query->get("h", 1);
+        $timespan = $request->query->get("h", 6);
         $city = $request->query->get("c", null);
 
         if ($redirect = $this->getRedirect($request)) {
