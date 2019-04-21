@@ -125,7 +125,7 @@
                 let size = 5 + (feature.get("bike_count")/2);
                 let fill = new ol.style.Fill({color: '#384977'});
 
-                if (feature.get("current_bikes") < 1) {
+                if (feature.get("bike_count") < 1) {
                     fill = new ol.style.Fill({color: '#BFE3F0'});
                 }
 
