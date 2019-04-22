@@ -198,6 +198,15 @@
                     pointLabel.push('<a href="/rower/' + bikeValue.bike + '">Rower ' + bikeValue.bike + '</a> - ' + bikeLabel + ' ' + bikeValue.time);
                 });
 
+                var pointType = "arr";
+
+                if (departureCount > 0) {
+                    pointType = "dep";
+                }
+
+                if (departureCount > 0 && arrivalCount > 0) {
+                    pointType = "mixed";
+                }
 
                 var path = new ol.format.Polyline({
                     factor: 1e5
@@ -206,19 +215,8 @@
                     featureProjection: 'EPSG:3857'
                 });
 
-                var pathType = "arr";
-
-                if (departureCount > 0) {
-                    pathType = "dep";
-                }
-
-                if (departureCount > 0 && arrivalCount > 0) {
-                    pathType = "mixed";
-                }
-
                 paths.push(new ol.Feature({
                     geometry: path,
-                    path_type: pathType,
                     type: 'route',
                 }));
 
@@ -226,6 +224,7 @@
                     geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
                     label: pointLabel.join("<br/>"),
                     point_size: value.bikes.length,
+                    point_type: pointType,
                 }));
             });
 
@@ -233,46 +232,12 @@
                 source: new ol.source.Vector({
                     features: paths
                 }),
-                style: function(feature) {
-                    let styles = [];
-
-                    switch (feature.get("path_type")) {
-                        case "arr":
-                            styles.push(new ol.style.Style({
-                                stroke: new ol.style.Stroke({
-                                    width: 3,
-                                    color: "#384977",
-                                })
-                            }));
-                            break;
-                        case "dep":
-                            styles.push(new ol.style.Style({
-                                stroke: new ol.style.Stroke({
-                                    width: 3,
-                                    color: "#EA5144",
-                                })
-                            }));
-                            break;
-                        case "mixed":
-                            styles.push(new ol.style.Style({
-                                stroke: new ol.style.Stroke({
-                                    width: 3,
-                                    color: "#384977",
-                                })
-                            }));
-
-                            styles.push(new ol.style.Style({
-                                stroke: new ol.style.Stroke({
-                                    width: 3,
-                                    color: "#EA5144",
-                                    lineDash: [10, 10]
-                                })
-                            }));
-                            break;
-                    }
-
-                    return styles;
-                }
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        width: 3,
+                        color: "#EA5144",
+                    })
+                })
             });
 
             let mapPointsLayer = new ol.layer.Vector({
@@ -281,19 +246,56 @@
                 }),
                 style: function(feature) {
                     let size = 4 + feature.get("point_size");
+                    let styles = [];
 
                     if (size > 40) {
                         size = 40;
                     }
 
-                    return new ol.style.Style({
-                        image: new ol.style.RegularShape({
-                            fill: new ol.style.Fill({color: '#BFE3F0'}),
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 20,
-                            radius: size,
-                        })
-                    })
+                    switch (feature.get("point_type")) {
+                        case "arr":
+                            styles.push(new ol.style.Style({
+                                image: new ol.style.RegularShape({
+                                    fill: new ol.style.Fill({color: '#A7AABC'}),
+                                    stroke: new ol.style.Stroke({
+                                        width: 2,
+                                        color: "#384977",
+                                    }),
+                                    points: 20,
+                                    radius: size,
+                                })
+                            }));
+                            break;
+                        case "dep":
+                            styles.push(new ol.style.Style({
+                                image: new ol.style.RegularShape({
+                                    fill: new ol.style.Fill({color: '#FF9F88'}),
+                                    stroke: new ol.style.Stroke({
+                                        width: 2,
+                                        color: "#A30012",
+                                    }),
+                                    points: 20,
+                                    radius: size,
+                                })
+                            }));
+                            break;
+                        case "mixed":
+                            styles.push(new ol.style.Style({
+                                image: new ol.style.RegularShape({
+                                    fill: new ol.style.Fill({color: '#9D89B3'}),
+                                    stroke: new ol.style.Stroke({
+                                        width: 2,
+                                        color: "#602ABD",
+                                    }),
+                                    points: 20,
+                                    radius: size,
+                                })
+                            }));
+
+                            break;
+                    }
+
+                    return styles;
                 }
             });
 
