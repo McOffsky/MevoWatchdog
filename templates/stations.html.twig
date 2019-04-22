@@ -7,14 +7,20 @@
         <div class="row">
 
             <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 1.5em;">
-                <div id="map" style="width: 100%; height: 96%; min-height: 600px;"></div>
+                <div class="spinner-wrapper">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+
+                </div>
+                <div id="map" style="width: 100%; height: 96%; min-height: 800px;"></div>
             </div>
 
             <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 1.5em;">
                 <div style="text-align: center; padding: 2em 0em 1em">
                     {% include "logo.html.twig" %}
                     <i>Ostatnia aktualizacja: <strong>{{ lastUpdate|date("H:i:s d-m-Y") }}</strong></i>
-                    <form method="GET">
+                    <form method="GET" id="filter_form">
                         <div class="form-group row">
                             <div class="col-md-3"></div>
 
@@ -81,120 +87,122 @@
     <div id="popup"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
     <script>
-        let timeFormat = "HH:mm / DD-MM-YYYY";
+        $.get( "/stations_map_data.js?" + $("#filter_form").serialize(), function( data ) {
+            $(".spinner-wrapper").hide();
 
-        let points = [];
+            let points = [];
 
-        $.each({{ stationPoints|json_encode|raw }}, function (key, value) {
-            let labels = [];
+            $.each(data.points, function (key, value) {
+                let labels = [];
 
-            if (value.name !== null) {
-                labels.push('<strong>' + value.name + '</strong>');
-            }
-
-            labels.push('<strong>Numer stacji:</strong> ' + value.code);
-            labels.push('<strong>GPS:</strong> ' + value.location);
-
-            labels.push('<strong>Rowery aktualnie na stacji:</strong>');
-            labels.push(value.bikes);
-            if (value.booked > 0) {
-                labels.push('<strong>Rowery zarezerwowane:</strong> '+value.booked);
-            }
-            labels.push('<strong>Stojaki rowerowe:</strong> '+value.racks);
-            labels.push();
-
-            labels.push('<strong>Rowery zalogowane na stacji ({{ timespan }}h):</strong>');
-            labels.push(value.bikeCount);
-
-            labels.push('<a href="/stacja/' + value.code + '"><strong>Zobacz więcej >></a>');
-
-            points.push(new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
-                label: labels.join("<br/>"),
-                bike_count: value.bikeCount,
-                current_bikes: value.bikes,
-            }));
-
-        });
-
-        var pointsLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: points
-            }),
-            style: function(feature) {
-                let size = 5 + (feature.get("bike_count")/2);
-                let fill = new ol.style.Fill({color: '#384977'});
-
-                if (feature.get("bike_count") < 1) {
-                    fill = new ol.style.Fill({color: '#BFE3F0'});
+                if (value.name !== null) {
+                    labels.push('<strong>' + value.name + '</strong>');
                 }
 
-                if (size > 40) {
-                    size = 40;
+                labels.push('<strong>Numer stacji:</strong> ' + value.code);
+                labels.push('<strong>GPS:</strong> ' + value.location);
+
+                labels.push('<strong>Rowery aktualnie na stacji:</strong>');
+                labels.push(value.bikes);
+                if (value.booked > 0) {
+                    labels.push('<strong>Rowery zarezerwowane:</strong> '+value.booked);
                 }
+                labels.push('<strong>Stojaki rowerowe:</strong> '+value.racks);
+                labels.push();
 
-                return [new ol.style.Style({
-                    image: new ol.style.RegularShape({
-                        fill: fill,
-                        stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                        points: 20,
-                        radius: size,
-                    })
-                })];
-            }
-        });
+                labels.push('<strong>Rowery zalogowane na stacji ({{ timespan }}h):</strong>');
+                labels.push(value.bikeCount);
 
-        var map = new ol.Map({
-            target: 'map',
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
+                labels.push('<a href="/stacja/' + value.code + '"><strong>Zobacz więcej >></a>');
+
+                points.push(new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                    label: labels.join("<br/>"),
+                    bike_count: value.bikeCount,
+                    current_bikes: value.bikes,
+                }));
+
+            });
+
+            var pointsLayer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: points
                 }),
-                pointsLayer,
-            ],
+                style: function(feature) {
+                    let size = 5 + (feature.get("bike_count")/2);
+                    let fill = new ol.style.Fill({color: '#384977'});
 
-            view: new ol.View({
-                {% if city is empty or stationPoints is empty %}
-                    center: ol.proj.fromLonLat([18.585843, 54.380577]),
-                    zoom: 9.5
-                {% else %}
-                    center: ol.proj.fromLonLat({{ stationPoints|first.loc|json_encode|raw }}),
-                    zoom: 11.75
-                {% endif %}
-            })
-        });
+                    if (feature.get("bike_count") < 1) {
+                        fill = new ol.style.Fill({color: '#BFE3F0'});
+                    }
 
-        var element = document.getElementById('popup');
+                    if (size > 40) {
+                        size = 40;
+                    }
 
-        var popup = new ol.Overlay({
-            element: element,
-            positioning: 'bottom-center',
-            stopEvent: false,
-            offset: [0, 0]
-        });
+                    return [new ol.style.Style({
+                        image: new ol.style.RegularShape({
+                            fill: fill,
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 20,
+                            radius: size,
+                        })
+                    })];
+                }
+            });
 
-        map.addOverlay(popup);
+            var map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    pointsLayer,
+                ],
 
-        // display popup on click
-        map.on('pointermove', function (evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel,
-                function (feature) {
-                    return feature;
-                });
-
-            if (feature && feature.get('label')) {
-                var coordinates = feature.getGeometry().getCoordinates();
-                popup.setPosition(coordinates);
-
-                $(element).attr("data-content", feature.get('label'));
-                $(element).popover({
-                    placement: 'top',
-                    html: true
+                view: new ol.View({
+                    {% if city is empty %}
+                        center: ol.proj.fromLonLat([18.585843, 54.380577]),
+                        zoom: 9.5
+                    {% else %}
+                        center: ol.proj.fromLonLat(data.points[0] ? data.points[0].loc : [18.585843, 54.380577]),
+                        zoom: data.points[0] ? 11.75 : 9.5
+                    {% endif %}
                 })
-                $(element).popover('show');
-            } else {
-                $(element).popover('hide');
-            }
+            });
+
+            var element = document.getElementById('popup');
+
+            var popup = new ol.Overlay({
+                element: element,
+                positioning: 'bottom-center',
+                stopEvent: false,
+                offset: [0, 0]
+            });
+
+            map.addOverlay(popup);
+
+            // display popup on click
+            map.on('pointermove', function (evt) {
+                var feature = map.forEachFeatureAtPixel(evt.pixel,
+                    function (feature) {
+                        return feature;
+                    });
+
+                if (feature && feature.get('label')) {
+                    var coordinates = feature.getGeometry().getCoordinates();
+                    popup.setPosition(coordinates);
+
+                    $(element).attr("data-content", feature.get('label'));
+                    $(element).popover({
+                        placement: 'top',
+                        html: true
+                    })
+                    $(element).popover('show');
+                } else {
+                    $(element).popover('hide');
+                }
+            });
         });
 
     </script>

@@ -13,6 +13,8 @@ use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
 use App\Repository\StationRepository;
 use App\Repository\SystemVariableRepository;
+use DateTime;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -41,7 +43,6 @@ class StationsController extends BaseController
         $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
 
         $context = [
-            "stationPoints" => $stationRepo->getStationPoints($timespan, $city),
             "topStations" => $stationRepo->getMostActiveStations($timespan, $city, 10),
             "timespan" => $timespan,
             "city" => $city,
@@ -51,9 +52,37 @@ class StationsController extends BaseController
 
         $response = $this->render('stations.html.twig', $context);
         $response->setSharedMaxAge(60);
+
         return $response;
     }
 
+    /**
+     * @Route("/stations_map_data.js", name="stations_map_data")
+     */
+    public function stationMapPoints(Request $request)
+    {
+        /** @var StationRepository $stationRepo */
+        $stationRepo = $this->getDoctrine()->getRepository(Station::class);
+
+        $timespan = $request->query->get("h", 6);
+        $city = $request->query->get("c", null);
+
+        /** @var SystemVariableRepository $sysVarRepo */
+        $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);
+        $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
+        $expireDatetime = new DateTime('@' . (intval($lastUpdateTimestamp->getValue()) + 60));
+
+        $context = [
+            'points' => $stationRepo->getStationPoints($timespan, $city),
+        ];
+
+        $response = new JsonResponse($context);
+        $response->setExpires($expireDatetime);
+        $response->setSharedMaxAge(60);
+        $response->setVary(["Accept-Encoding"]);
+
+        return $response;
+    }
 
     /**
      * @Route("/stacja/{code}", name="station_view")

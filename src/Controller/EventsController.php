@@ -2,10 +2,15 @@
 
 namespace App\Controller;
 
+use App\Command\FetchCommand;
 use App\Entity\Bike;
 use App\Entity\BikeEvent;
+use App\Entity\SystemVariable;
 use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
+use App\Repository\SystemVariableRepository;
+use DateTime;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -32,7 +37,6 @@ class EventsController extends BaseController
 
         $context = [
             "events" => $eventRepo->getEvents($timespan, $city, $type),
-            "points" => $eventRepo->getEventPoints($timespan, $city, $type),
             "timespan" => $timespan,
             "city" => $city,
             "type" => $type,
@@ -41,6 +45,36 @@ class EventsController extends BaseController
 
         $response = $this->render('events.html.twig', $context);
         $response->setSharedMaxAge(60);
+
+        return $response;
+    }
+
+    /**
+     * @Route("/event_map_data.js", name="event_map_data")
+     */
+    public function eventPoints(Request $request)
+    {
+        /** @var BikeEventRepository $eventRepo */
+        $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
+
+        $timespan = $request->query->get("h", 24);
+        $city = $request->query->get("c", null);
+        $type = $request->query->get("t", null);
+
+        /** @var SystemVariableRepository $sysVarRepo */
+        $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);
+        $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
+        $expireDatetime = new DateTime('@' . (intval($lastUpdateTimestamp->getValue()) + 60));
+
+        $context = [
+            "points" => $eventRepo->getEventPoints($timespan, $city, $type),
+        ];
+
+        $response = new JsonResponse($context);
+        $response->setExpires($expireDatetime);
+        $response->setSharedMaxAge(60);
+        $response->setVary(["Accept-Encoding"]);
+
         return $response;
     }
 }

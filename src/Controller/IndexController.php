@@ -105,7 +105,7 @@ class IndexController extends BaseController
         $response = new JsonResponse($context);
 
         $response->setExpires($expireDatetime);
-        $response->setSharedMaxAge(120);
+        $response->setSharedMaxAge(60);
         $response->setVary(["Accept-Encoding"]);
 
         return $response;

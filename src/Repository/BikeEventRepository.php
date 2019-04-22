@@ -124,6 +124,7 @@ class BikeEventRepository extends ServiceEntityRepository
                 if (!array_key_exists($location,$points)) {
                     $points[$location] = [
                         'loc' => $event->getLoc(),
+                        'location' => $event->getLocation(),
                         'events' => [],
                     ];
                 }
