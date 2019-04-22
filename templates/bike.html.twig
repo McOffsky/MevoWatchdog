@@ -6,7 +6,7 @@
 
         <div class="row">
 
-            <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 1em;">
+            <div class="col-lg-6 col-md-12 order-2 order-lg-1" style="padding-top: 1em;">
                 <div class="spinner-wrapper">
                     <div class="spinner-border" role="status">
                         <span class="sr-only">Loading...</span>
@@ -27,7 +27,7 @@
                 </i></div>
             </div>
 
-            <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 1em;">
+            <div class="col-lg-6 col-md-12 order-1 order-lg-2" style="padding-bottom: 1em;">
                 <div style="text-align: center; padding: 2em 0em 1em">
                     {% include "logo.html.twig" %}
                     <div class="col-lg-12 col-md-12 order-md-1 order-lg-1" style="padding-bottom: 1em;">
@@ -259,7 +259,7 @@
                                 fill: new ol.style.Fill({color: 'green'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 6,
+                                radius: 10,
                             })
                             break;
                         case "low_battery":
@@ -267,7 +267,7 @@
                                 fill: new ol.style.Fill({color: 'yellow'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 6,
+                                radius: 10,
                             })
                             break;
                         case "depleted_battery":
@@ -275,15 +275,15 @@
                                 fill: new ol.style.Fill({color: 'red'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 6,
+                                radius: 10,
                             })
                             break;
                         case "location":
                             image = new ol.style.RegularShape({
                                 fill: new ol.style.Fill({color: '#BFE3F0'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                                points: 10,
-                                radius: 5,
+                                points: 20,
+                                radius: 8,
                             })
                             break;
                         case "current":
@@ -304,8 +304,8 @@
                             image = new ol.style.RegularShape({
                                 fill: fill,
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                                points: 9,
-                                radius: 8,
+                                points: 20,
+                                radius: 12,
                             })
 
                             break;
