@@ -11,8 +11,10 @@ use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
 use App\Repository\SystemVariableRepository;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use DateTime;
 
 class IndexController extends BaseController
 {
@@ -42,18 +44,12 @@ class IndexController extends BaseController
         $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
 
         $context = [
-            "availableSummary" => $statusRepo->getAvailableSummary($timespan, $city),
-            "lastSeenActive" => $bikeRepo->getLastSeenActive($timespan, $city),
             "countAvailable2h" => $bikeRepo->getActiveCount(2, $city),
-            "batteryStatus" => $bikeRepo->getBatteryStatus($timespan, $city),
             "locationChangeCount" => $statusRepo->getLocationChangeTimespanCount($timespan, null, $city),
-            "locationChangeSummary" => $statusRepo->getLocationChangeSummary($timespan, $city),
-            "locationChangeDailySummary" => $statusRepo->getLocationChangeDailySummary(7, $city),
 
             "lowBatteryCount" => $eventRepo->countByType(BikeEvent::LOW_BATTERY, $timespan, $city),
             "depletedBatteryCount" => $eventRepo->countByType(BikeEvent::DEPLETED_BATTERY, $timespan, $city),
             "replacedBatteryCount" => $eventRepo->countByType(BikeEvent::NEW_BATTERY, $timespan, $city),
-            "replacedBatterySummary" => $eventRepo->summaryByType(BikeEvent::NEW_BATTERY, 7, $city),
 
             "knownBikesCount" => $bikeRepo->getKnownBikesCount($city),
             "events2h" => $eventRepo->getEvents(2, $city),
@@ -65,10 +61,53 @@ class IndexController extends BaseController
             "knownCities" => $bikeRepo->getCities(),
         ];
 
-
-
         $response = $this->render('charts.html.twig', $context);
         $response->setSharedMaxAge(60);
+
+        return $response;
+    }
+
+    /**
+     * @Route("/chart_data.js", name="chart_data_view")
+     */
+    public function chartData(Request $request)
+    {
+        /** @var BikeRepository $bikeRepo */
+        $bikeRepo = $this->getDoctrine()->getRepository(Bike::class);
+
+        /** @var BikeStatusRepository $statusRepo */
+        $statusRepo = $this->getDoctrine()->getRepository(BikeStatus::class);
+
+        /** @var BikeEventRepository $eventRepo */
+        $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
+
+        $timespan = $request->query->get("h", 24);
+        $city = $request->query->get("c", null);
+
+        /** @var SystemVariableRepository $sysVarRepo */
+        $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);
+        $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
+        $expireDatetime = new DateTime('@' . (intval($lastUpdateTimestamp->getValue()) + 60));
+
+
+        $context = [
+            "availableSummary" => $statusRepo->getAvailableSummary($timespan, $city),
+            "lastSeenActive" => $bikeRepo->getLastSeenActive($timespan, $city),
+            "batteryStatus" => $bikeRepo->getBatteryStatus($timespan, $city),
+            "locationChangeSummary" => $statusRepo->getLocationChangeSummary($timespan, $city),
+            "locationChangeDailySummary" => $statusRepo->getLocationChangeDailySummary(7, $city),
+            "replacedBatterySummary" => $eventRepo->summaryByType(BikeEvent::NEW_BATTERY, 7, $city),
+
+            "bikeDeclaration" => 1224,
+            "timespan" => $timespan,
+        ];
+
+        $response = new JsonResponse($context);
+
+        $response->setExpires($expireDatetime);
+        $response->setSharedMaxAge(120);
+        $response->setVary(["Accept-Encoding"]);
+
         return $response;
     }
 }

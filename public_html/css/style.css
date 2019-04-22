@@ -67,3 +67,8 @@ body .navbar .nav-item.facebook-link a i {
     font-size: 0.7em;
     padding-bottom: 1em;
 }
+
+.spinner-wrapper {
+    width: 30px;
+    margin: 0 auto;
+}

@@ -5,6 +5,12 @@
         <div class="row" style="padding-bottom: 2em;">
 
             <div class="col-lg-6 col-md-12 order-md-2 order-lg-1" style="padding-top: 1em;">
+                <div class="spinner-wrapper">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+
+                </div>
                 <canvas id="availableSummaryChart" style="display: block; width: 100%; height: 280px;"></canvas>
                 <hr/>
                 <canvas id="inactiveSummaryChart" style="display: block; width: 100%; height: 280px;"></canvas>
@@ -26,7 +32,7 @@
                     {% include "logo.html.twig" %}
                     <i>Ostatnia aktualizacja: <strong>{{ lastUpdate|date("H:i:s d-m-Y") }}</strong>,
                         miasto: {{ city|default("Wszystkie") }}</i>
-                    <form method="GET">
+                    <form method="GET" id="filter_form">
                         <div class="form-group row">
                             <div class="col-md-3"></div>
 
@@ -139,246 +145,252 @@
     </div>
 
     <script>
-        var inactiveSummary = {{ lastSeenActive|json_encode|raw }};
-        var availableSummary = {{ availableSummary|json_encode|raw }};
-        var batterySummary = {{ batteryStatus|json_encode|raw }};
-        var locationChangeDailySummary = {{ locationChangeDailySummary|json_encode|raw }};
-        var locationChangeSummary = {{ locationChangeSummary|json_encode|raw }};
-        var replacedBatterySummary = {{ replacedBatterySummary|json_encode|raw }};
-
-        // Create the chart.js data structure using 'labels' and 'data'
-        var inactiveSummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: "#EA5144",
-                data: []
-            }]
-        };
-
-        var availableSummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: "#EA5144",
-                data: []
-            }]
-        };
-
-        var locationChangeDailySummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: "#EA5144",
-                data: []
-            }]
-        };
-
-        var locationChangeSummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: "#EA5144",
-                data: []
-            }]
-        };
-
-        var replacedBatterySummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: "#EA5144",
-                data: []
-            }]
-        };
-
-        var batterySummaryChartData = {
-            labels: [],
-            datasets: [{
-                backgroundColor: ['#00ff6c', '#6eea66', '#94d560', '#afc05a', '#c3a954', '#d3904e', '#df7549', '#ea5144', '#ff0000', '#ff0000'],
-                data: []
-            }]
-        };
-
-        $.each(inactiveSummary, function (key, value) {
-            inactiveSummaryChartData.labels.push(key);
-            inactiveSummaryChartData.datasets[0].data.push(value);
-        });
-
-        $.each(batterySummary, function (key, value) {
-            batterySummaryChartData.labels.push(key + " (" + value + ")");
-            batterySummaryChartData.datasets[0].data.push(value);
-        });
-
-        $.each(availableSummary, function (key, value) {
-            availableSummaryChartData.labels.push(key);
-            availableSummaryChartData.datasets[0].data.push(value);
-        });
+        $.get( "/chart_data.js?" + $("#filter_form").serialize(), function( data ) {
+            $(".spinner-wrapper").hide();
 
 
-        $.each(locationChangeSummary, function (key, value) {
-            locationChangeSummaryChartData.labels.push(key);
-            locationChangeSummaryChartData.datasets[0].data.push(value);
-        });
+            var inactiveSummary = data.lastSeenActive;
+            var availableSummary = data.availableSummary;
+            var batterySummary = data.batteryStatus;
+            var locationChangeDailySummary = data.locationChangeDailySummary;
+            var locationChangeSummary = data.locationChangeSummary;
+            var replacedBatterySummary = data.replacedBatterySummary;
 
-        $.each(locationChangeDailySummary, function (key, value) {
-            locationChangeDailySummaryChartData.labels.push(key);
-            locationChangeDailySummaryChartData.datasets[0].data.push(value);
-        });
+            // Create the chart.js data structure using 'labels' and 'data'
+            var inactiveSummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: "#EA5144",
+                    data: []
+                }]
+            };
 
-        $.each(replacedBatterySummary, function (key, value) {
-            replacedBatterySummaryChartData.labels.push(key);
-            replacedBatterySummaryChartData.datasets[0].data.push(value);
-        });
+            var availableSummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: "#EA5144",
+                    data: []
+                }]
+            };
 
-        new Chart(document.getElementById("inactiveSummaryChart"), {
-            type: 'bar',
-            data: inactiveSummaryChartData,
-            options: {
-                legend: {display: false},
-                title: {
-                    display: true,
-                    text: 'Jak długo rowery pozostają niedostępne w ciągu ostatnich {{ timespan }} godzin? (serwisowane, rozładowane lub zajęte)'
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
-                        {% if city is empty %}
-                            max: {{ bikeDeclaration }}
-                        {% endif %}
+            var locationChangeDailySummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: "#EA5144",
+                    data: []
+                }]
+            };
+
+            var locationChangeSummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: "#EA5144",
+                    data: []
+                }]
+            };
+
+            var replacedBatterySummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: "#EA5144",
+                    data: []
+                }]
+            };
+
+            var batterySummaryChartData = {
+                labels: [],
+                datasets: [{
+                    backgroundColor: ['#00ff6c', '#6eea66', '#94d560', '#afc05a', '#c3a954', '#d3904e', '#df7549', '#ea5144', '#ff0000', '#ff0000'],
+                    data: []
+                }]
+            };
+
+            $.each(inactiveSummary, function (key, value) {
+                inactiveSummaryChartData.labels.push(key);
+                inactiveSummaryChartData.datasets[0].data.push(value);
+            });
+
+            $.each(batterySummary, function (key, value) {
+                batterySummaryChartData.labels.push(key + " (" + value + ")");
+                batterySummaryChartData.datasets[0].data.push(value);
+            });
+
+            $.each(availableSummary, function (key, value) {
+                availableSummaryChartData.labels.push(key);
+                availableSummaryChartData.datasets[0].data.push(value);
+            });
+
+
+            $.each(locationChangeSummary, function (key, value) {
+                locationChangeSummaryChartData.labels.push(key);
+                locationChangeSummaryChartData.datasets[0].data.push(value);
+            });
+
+            $.each(locationChangeDailySummary, function (key, value) {
+                locationChangeDailySummaryChartData.labels.push(key);
+                locationChangeDailySummaryChartData.datasets[0].data.push(value);
+            });
+
+            $.each(replacedBatterySummary, function (key, value) {
+                replacedBatterySummaryChartData.labels.push(key);
+                replacedBatterySummaryChartData.datasets[0].data.push(value);
+            });
+
+            new Chart(document.getElementById("inactiveSummaryChart"), {
+                type: 'bar',
+                data: inactiveSummaryChartData,
+                options: {
+                    legend: {display: false},
+                    title: {
+                        display: true,
+                        text: 'Jak długo rowery pozostają niedostępne w ciągu ostatnich {{ timespan }} godzin? (serwisowane, rozładowane lub zajęte)'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                {% if city is empty %}
+                                max: {{ bikeDeclaration }}
+                                {% endif %}
+                            }
+                        }]
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
                         }
-                    }]
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
                     }
                 }
-            }
-        });
+            });
 
-        new Chart(document.getElementById("availableSummaryChart"), {
-            type: 'bar',
-            data: availableSummaryChartData,
-            options: {
-                legend: {display: false},
-                showDatapoints: true,
-                title: {
-                    display: true,
-                    text: 'Liczba rowerów dostępnych do wypożyczenia (bateria > 20%) w ciągu {{ timespan }} godzin'
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
-                        {% if city is empty %}
-                            max: {{ bikeDeclaration }}
-                        {% endif %}
+            new Chart(document.getElementById("availableSummaryChart"), {
+                type: 'bar',
+                data: availableSummaryChartData,
+                options: {
+                    legend: {display: false},
+                    showDatapoints: true,
+                    title: {
+                        display: true,
+                        text: 'Liczba rowerów dostępnych do wypożyczenia (bateria > 20%) w ciągu {{ timespan }} godzin'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                {% if city is empty %}
+                                max: {{ bikeDeclaration }}
+                                {% endif %}
+                            }
+                        }]
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
                         }
-                    }]
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
                     }
                 }
-            }
-        });
+            });
 
 
-        new Chart(document.getElementById("locationChangeSummaryChart"), {
-            type: 'bar',
-            data: locationChangeSummaryChartData,
-            options: {
-                legend: {display: false},
-                showDatapoints: true,
-                title: {
-                    display: true,
-                    text: 'Liczba zmian lokacji (wypożyczenie lub przestawienie przez serwis) w ostatnich {{ timespan }} godzinach'
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
+            new Chart(document.getElementById("locationChangeSummaryChart"), {
+                type: 'bar',
+                data: locationChangeSummaryChartData,
+                options: {
+                    legend: {display: false},
+                    showDatapoints: true,
+                    title: {
+                        display: true,
+                        text: 'Liczba zmian lokacji (wypożyczenie lub przestawienie przez serwis) w ostatnich {{ timespan }} godzinach'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                            }
+                        }]
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
                         }
-                    }]
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
                     }
                 }
-            }
-        });
+            });
 
-        new Chart(document.getElementById("locationChangeDailySummaryChart"), {
-            type: 'bar',
-            data: locationChangeDailySummaryChartData,
-            options: {
-                legend: {display: false},
-                showDatapoints: true,
-                title: {
-                    display: true,
-                    text: 'Liczba zmian lokacji (wypożyczenie lub przestawienie przez serwis) w ostatnich 7 dniach'
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
+            new Chart(document.getElementById("locationChangeDailySummaryChart"), {
+                type: 'bar',
+                data: locationChangeDailySummaryChartData,
+                options: {
+                    legend: {display: false},
+                    showDatapoints: true,
+                    title: {
+                        display: true,
+                        text: 'Liczba zmian lokacji (wypożyczenie lub przestawienie przez serwis) w ostatnich 7 dniach'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                            }
+                        }]
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
                         }
-                    }]
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
                     }
                 }
-            }
-        });
+            });
 
 
-        new Chart(document.getElementById("replacedBatterySummaryChart"), {
-            type: 'bar',
-            data: replacedBatterySummaryChartData,
-            options: {
-                legend: {display: false},
-                showDatapoints: true,
-                title: {
-                    display: true,
-                    text: 'Liczba zmienionych baterii dziennie w ostatnich 7 dniach'
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
+            new Chart(document.getElementById("replacedBatterySummaryChart"), {
+                type: 'bar',
+                data: replacedBatterySummaryChartData,
+                options: {
+                    legend: {display: false},
+                    showDatapoints: true,
+                    title: {
+                        display: true,
+                        text: 'Liczba zmienionych baterii dziennie w ostatnich 7 dniach'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                            }
+                        }]
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
                         }
-                    }]
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
                     }
                 }
-            }
+            });
+
+            new Chart(document.getElementById("batterySummaryChart"), {
+                type: 'doughnut',
+                data: batterySummaryChartData,
+                options: {
+                    title: {
+                        display: true,
+                        text: 'Ostatni zalogowany status baterii rowerów aktywnych w ciągu ostatnich {{ timespan }} godzin'
+                    },
+                    plugins: {
+                        labels: {
+                            render: 'value',
+                            textShadow: true,
+                            fontColor: '#000',
+                            shadowBlur: 5,
+                            shadowOffsetX: 0,
+                            shadowOffsetY: 0,
+                            shadowColor: '#fff',
+                            showZero: false,
+                        }
+                    }
+                }
+            });
         });
 
-        new Chart(document.getElementById("batterySummaryChart"), {
-            type: 'doughnut',
-            data: batterySummaryChartData,
-            options: {
-                title: {
-                    display: true,
-                    text: 'Ostatni zalogowany status baterii rowerów aktywnych w ciągu ostatnich {{ timespan }} godzin'
-                },
-                plugins: {
-                    labels: {
-                        render: 'value',
-                        textShadow: true,
-                        fontColor: '#000',
-                        shadowBlur: 5,
-                        shadowOffsetX: 0,
-                        shadowOffsetY: 0,
-                        shadowColor: '#fff',
-                        showZero: false,
-                    }
-                }
-            }
-        });
     </script>
 {% endblock %}
