@@ -1,8 +1,8 @@
 <?php
 namespace App\Command;
 
-use App\API\GdzieJestMevoClient;
-use App\API\MevoClient;
+use App\Client\GdzieJestMevoClient;
+use App\Client\MevoClient;
 use App\Entity\RawStation;
 use App\Entity\Station;
 use Symfony\Component\Console\Command\Command;

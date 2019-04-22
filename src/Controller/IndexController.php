@@ -68,7 +68,7 @@ class IndexController extends BaseController
     }
 
     /**
-     * @Route("/chart_data.js", name="chart_data_view")
+     * @Route("/chart_data.json", name="chart_data_view")
      */
     public function chartData(Request $request)
     {

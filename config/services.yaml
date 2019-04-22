@@ -28,21 +28,35 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
+    App\Controller\BikeController:
+        arguments:
+            - '@App\Client\GdzieJestMevoClient'
+
+    App\Controller\StationsController:
+        arguments:
+            - '@App\Client\GdzieJestMevoClient'
+
     App\Command\FetchCommand:
         arguments:
             - '@doctrine.orm.entity_manager'
-            - '@App\API\MevoClient'
+            - '@App\Client\MevoClient'
         tags:
             - { name: 'console.command', command: 'mevo:fetch' }
 
     App\Command\FetchStationsCommand:
         arguments:
             - '@doctrine.orm.entity_manager'
-            - '@App\API\MevoClient'
-            - '@App\API\GdzieJestMevoClient'
+            - '@App\Client\MevoClient'
+            - '@App\Client\GdzieJestMevoClient'
         tags:
             - { name: 'console.command', command: 'mevo:fetch:stations' }
 
-    App\API\MevoClient:
+    App\Client\MevoClient:
         arguments:
             - '@doctrine.orm.entity_manager'
+
+    App\Client\GdzieJestMevoClient:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '%env(STATIONS_NAMES_ENDPOINT)%'
+            - '%env(OSRM_ENDPOINT)%'

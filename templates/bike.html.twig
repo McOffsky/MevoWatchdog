@@ -7,6 +7,12 @@
         <div class="row">
 
             <div class="col-lg-6 col-md-12 order-md-3 order-lg-2" style="padding-top: 1em;">
+                <div class="spinner-wrapper">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+
+                </div>
                 <canvas id="batteryHistoryChart" style="display: block; width: 100%; height: 350px;"></canvas>
                 <div class="text-center"><i>
                         <small>Linie przerywane oznaczają logowanie w nowej lokalizacji.</small>
@@ -14,6 +20,11 @@
                 <hr/>
                 <h6>Zapis znanych lokalizacji z ostatnich {{ timespan }}h</h6>
                 <div id="map" style="width: 100%; height: 420px;"></div>
+                <div class="text-center"><i>
+                    <small>Wyznaczone trasy reprezentują najkrótszą trasę dla roweru między punktami obliczoną przez Open Source Routing Machine.<br/>Trasy nie odzwierciedlają faktycznych tras rowerów.
+                        <br/>&copy; <a href="http://openmaptiles.org/">OpenMapTiles</a>
+                    </small>
+                </i></div>
             </div>
 
             <div class="col-lg-6 col-md-12 order-md-2 order-lg-3" style="padding-bottom: 1em;">
@@ -26,7 +37,7 @@
 
 
                     <input type="hidden" name="_target_path" value="{{ referer }}" />
-                    <form method="GET">
+                    <form method="GET" id="filter_form">
                         <div class="form-group row">
                             <div class="col-md-5"></div>
 
@@ -105,268 +116,287 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js"></script>
     <script>
 
-        let timeFormat = "HH:mm / DD-MM-YYYY";
+        $.get( "/rower/{{ bike.code }}/data.json?" + $("#filter_form").serialize(), function( data ) {
+            $(".spinner-wrapper").hide();
 
-        var batteryHistoryLocationChange = [];
-        var batteryHistoryChartData = {
-            labels: [],
-            datasets: [{
-                lineTension: 0,
-                borderColor: "#EA5144",
-                fill: true,
-                data: [],
-            }]
-        };
 
-        $.each({{ batteryHistory|json_encode|raw }}, function (key, value) {
-            batteryHistoryChartData.labels.push(value.time);
-            batteryHistoryChartData.datasets[0].data.push({x: value.time, y: value.battery});
+            let timeFormat = "HH:mm / DD-MM-YYYY";
 
-            if (value.locationChange) {
-                batteryHistoryLocationChange.push({
-                    type: 'line',
-                    mode: 'vertical',
-                    scaleID: 'x-axis-0',
-                    value: moment(value.time, timeFormat).toDate(),
-                    borderColor: '#888',
-                    borderWidth: 1,
-                    borderDash: [5, 2]
-                });
-            }
-        });
+            var batteryHistoryLocationChange = [];
+            var batteryHistoryChartData = {
+                labels: [],
+                datasets: [{
+                    lineTension: 0,
+                    borderColor: "#EA5144",
+                    fill: true,
+                    data: [],
+                }]
+            };
 
-        let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
-            type: 'line',
-            data: batteryHistoryChartData,
-            options: {
-                title: {
-                    display: true,
-                    text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
-                },
-                legend: {
-                    display: false,
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    }],
-                    xAxes: [{
-                        type: "time",
-                        time: {
-                            format: timeFormat,
-                            displayFormats: {month: 'MM', day: 'DD', hour: "H:00"},
-                        }
-                    }],
-                },
-                annotation: {
-                    drawTime: 'beforeDatasetsDraw',
-                    annotations: batteryHistoryLocationChange
+            $.each(data.batteryHistory, function (key, value) {
+                batteryHistoryChartData.labels.push(value.time);
+                batteryHistoryChartData.datasets[0].data.push({x: value.time, y: value.battery});
+
+                if (value.locationChange) {
+                    batteryHistoryLocationChange.push({
+                        type: 'line',
+                        mode: 'vertical',
+                        scaleID: 'x-axis-0',
+                        value: moment(value.time, timeFormat).toDate(),
+                        borderColor: '#888',
+                        borderWidth: 1,
+                        borderDash: [5, 2]
+                    });
                 }
-            },
-        });
+            });
 
-        let mapPoints = [];
+            let chartInstance = new Chart(document.getElementById("batteryHistoryChart"), {
+                type: 'line',
+                data: batteryHistoryChartData,
+                options: {
+                    title: {
+                        display: true,
+                        text: 'Historia poziomu baterii z ostatnich {{ timespan }}h'
+                    },
+                    legend: {
+                        display: false,
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }],
+                        xAxes: [{
+                            type: "time",
+                            time: {
+                                format: timeFormat,
+                                displayFormats: {month: 'MM', day: 'DD', hour: "H:00"},
+                            }
+                        }],
+                    },
+                    annotation: {
+                        drawTime: 'beforeDatasetsDraw',
+                        annotations: batteryHistoryLocationChange
+                    }
+                },
+            });
 
-        $.each({{ mapPoints|reverse|json_encode|raw }}, function (key, value) {
-            let labels = [];
-            let point_type = "location";
-            let event_type = null;
+            let mapPoints = [];
 
-            if (value.hasOwnProperty("current")) {
-                labels.push("<strong>Ostatnio widziany:</strong>");
-                labels.push(value.time);
-                labels.push("<strong>Ostatni znany stan baterii:</strong>");
-                labels.push(value.battery + "%");
-            }
+            $.each(data.points, function (key, value) {
+                let labels = [];
+                let point_type = "location";
+                let event_type = null;
 
-            if (value.hasOwnProperty("events")) {
+                if (value.hasOwnProperty("current")) {
+                    labels.push("<strong>Ostatnio widziany:</strong>");
+                    labels.push(value.time);
+                    labels.push("<strong>Ostatni znany stan baterii:</strong>");
+                    labels.push(value.battery + "%");
+                }
 
-                labels.push("<strong>Status:</strong>");
-                point_type = value.events[0].type;
-                event_type = value.events[0].type;
+                if (value.hasOwnProperty("events")) {
 
-                $.each(value.events, function(eventKey, event){
-                    let label = '';
-                    switch (event.type) {
+                    labels.push("<strong>Status:</strong>");
+                    point_type = value.events[0].type;
+                    event_type = value.events[0].type;
+
+                    $.each(value.events, function(eventKey, event){
+                        let label = '';
+                        switch (event.type) {
+                            case "new_battery":
+                                label += "Nowa bateria";
+                                break;
+                            case "low_battery":
+                                label += "Słaba bateria";
+                                break;
+                            case "depleted_battery":
+                                label += "Rozładowany";
+                                break;
+                        }
+
+                        label += " - " + event.time;
+
+                        labels.push(label);
+                    });
+                }
+
+                if (value.hasOwnProperty("current")) {
+                    point_type = "current";
+                }
+
+                if (value.hasOwnProperty("visit")) {
+                    labels.push("<strong>Pojawienia się w lokalizacji:</strong>");
+                    $.each(value.visit, function(visitKey, visit){
+                        labels.push(visit);
+                    });
+                }
+
+                labels.push('<a href="/?location=' + value.location + '"><strong>Szukaj stacji >></a>');
+
+                mapPoints.push(new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
+                    label: labels.join("<br/>"),
+                    point_type: point_type,
+                    event_type: event_type
+                }));
+
+            });
+
+
+            let mapPointsLayer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: mapPoints
+                }),
+                style: function(feature) {
+                    let image = null;
+
+                    switch (feature.get("point_type")) {
                         case "new_battery":
-                            label += "Nowa bateria";
+                            image = new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: 'green'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                                points: 4,
+                                radius: 6,
+                            })
                             break;
                         case "low_battery":
-                            label += "Słaba bateria";
+                            image = new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: 'yellow'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                                points: 4,
+                                radius: 6,
+                            })
                             break;
                         case "depleted_battery":
-                            label += "Rozładowany";
+                            image = new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: 'red'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                                points: 4,
+                                radius: 6,
+                            })
+                            break;
+                        case "location":
+                            image = new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: '#BFE3F0'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                                points: 10,
+                                radius: 5,
+                            })
+                            break;
+                        case "current":
+                            let fill = new ol.style.Fill({color: '#BFE3F0'});
+
+                            switch (feature.get("event_type")) {
+                                case "new_battery":
+                                    fill = new ol.style.Fill({color: 'green'});
+                                    break;
+                                case "low_battery":
+                                    fill = new ol.style.Fill({color: 'yellow'});
+                                    break;
+                                case "depleted_battery":
+                                    fill = new ol.style.Fill({color: 'red'});
+                                    break;
+                            }
+
+                            image = new ol.style.RegularShape({
+                                fill: fill,
+                                stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                                points: 9,
+                                radius: 8,
+                            })
+
                             break;
                     }
 
-                    label += " - " + event.time;
-
-                    labels.push(label);
-                });
-            }
-
-            if (value.hasOwnProperty("current")) {
-                point_type = "current";
-            }
-
-            if (value.hasOwnProperty("visit")) {
-                labels.push("<strong>Pojawienia się w lokalizacji:</strong>");
-                $.each(value.visit, function(visitKey, visit){
-                    labels.push(visit);
-                });
-            }
-
-            labels.push('<a href="/?location=' + value.location + '"><strong>Szukaj stacji >></a>');
-
-            mapPoints.push(new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat(value.loc)),
-                label: labels.join("<br/>"),
-                point_type: point_type,
-                event_type: event_type
-            }));
-
-        });
-
-
-        let mapPointsLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: mapPoints
-            }),
-            style: function(feature) {
-                let image = null;
-
-                switch (feature.get("point_type")) {
-                    case "new_battery":
-                        image = new ol.style.RegularShape({
-                            fill: new ol.style.Fill({color: 'green'}),
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 4,
-                            radius: 6,
-                        })
-                        break;
-                    case "low_battery":
-                        image = new ol.style.RegularShape({
-                            fill: new ol.style.Fill({color: 'yellow'}),
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 4,
-                            radius: 6,
-                        })
-                        break;
-                    case "depleted_battery":
-                        image = new ol.style.RegularShape({
-                            fill: new ol.style.Fill({color: 'red'}),
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 4,
-                            radius: 6,
-                        })
-                        break;
-                    case "location":
-                        image = new ol.style.RegularShape({
-                            fill: new ol.style.Fill({color: '#BFE3F0'}),
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 10,
-                            radius: 5,
-                        })
-                        break;
-                    case "current":
-                        let fill = new ol.style.Fill({color: '#BFE3F0'});
-
-                        switch (feature.get("event_type")) {
-                            case "new_battery":
-                                fill = new ol.style.Fill({color: 'green'});
-                                break;
-                            case "low_battery":
-                                fill = new ol.style.Fill({color: 'yellow'});
-                                break;
-                            case "depleted_battery":
-                                fill = new ol.style.Fill({color: 'red'});
-                                break;
-                        }
-
-                        image = new ol.style.RegularShape({
-                            fill: fill,
-                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            points: 9,
-                            radius: 8,
-                        })
-
-                        break;
+                    return [new ol.style.Style({
+                        image: image
+                    })];
                 }
+            });
 
-                return [new ol.style.Style({
-                    image: image
-                })];
-            }
-        });
+            let paths = [];
+            $.each(data.paths, function (key, value) {
+                if (value.routes[0] !== undefined) {
+                    var route = new ol.format.Polyline({
+                        factor: 1e5
+                    }).readGeometry(value.routes[0].geometry, {
+                        dataProjection: 'EPSG:4326',
+                        featureProjection: 'EPSG:3857'
+                    });
 
-        var path = new ol.geom.LineString({{ locationHistory|json_encode|raw }});
-        path.transform('EPSG:4326', 'EPSG:3857');
+                    paths.push(new ol.Feature({
+                        geometry: route,
+                        type: 'route',
+                    }));
+                }
+            });
 
-        var pathLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                features: [new ol.Feature({
-                    geometry: path,
-                    name: 'Line'
-                })]
-            }),
-            style: new ol.style.Style({
-                stroke: new ol.style.Stroke({
-                    width: 3,
-                    color: "#EA5144",
-                })
-            })
-        });
-
-        var map = new ol.Map({
-            target: 'map',
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
+            var pathLayer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: paths
                 }),
-                pathLayer,
-                mapPointsLayer,
-            ],
-            view: new ol.View({
-                center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
-                zoom: 11
-            })
-        });
-
-        var element = document.getElementById('popup');
-
-        var popup = new ol.Overlay({
-            element: element,
-            positioning: 'bottom-center',
-            stopEvent: false,
-            offset: [0, 0]
-        });
-
-        map.addOverlay(popup);
-
-        // display popup on click
-        map.on('pointermove', function (evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel,
-                function (feature) {
-                    return feature;
-                });
-
-            if (feature && feature.get('label')) {
-                var coordinates = feature.getGeometry().getCoordinates();
-                popup.setPosition(coordinates);
-
-                $(element).attr("data-content", feature.get('label'));
-                $(element).popover({
-                    placement: 'top',
-                    html: true
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        width: 3,
+                        color: "#EA5144",
+                    })
                 })
-                $(element).popover('show');
-            } else {
-                $(element).popover('hide');
-            }
-        });
+            });
 
+            var map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM({
+                            url:'https://tiles.gdziejestmevo.pl/styles/klokantech-basic/{z}/{x}/{y}@2x.png',
+                            crossOrigin: null
+                        })
+                    }),
+                    pathLayer,
+                    mapPointsLayer,
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
+                    zoom: 11
+                })
+            });
+
+            var element = document.getElementById('popup');
+
+            var popup = new ol.Overlay({
+                element: element,
+                positioning: 'bottom-center',
+                stopEvent: false,
+                offset: [0, 0]
+            });
+
+            map.addOverlay(popup);
+
+            // display popup on click
+            map.on('pointermove', function (evt) {
+                var feature = map.forEachFeatureAtPixel(evt.pixel,
+                    function (feature) {
+                        return feature;
+                    });
+
+                if (feature && feature.get('label')) {
+                    var coordinates = feature.getGeometry().getCoordinates();
+                    popup.setPosition(coordinates);
+
+                    $(element).attr("data-content", feature.get('label'));
+                    $(element).popover({
+                        placement: 'top',
+                        html: true
+                    })
+                    $(element).popover('show');
+                } else {
+                    $(element).popover('hide');
+                }
+            });
+
+        });
     </script>
 {% endblock %}

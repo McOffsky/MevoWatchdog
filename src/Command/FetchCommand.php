@@ -1,7 +1,7 @@
 <?php
 namespace App\Command;
 
-use App\API\MevoClient;
+use App\Client\MevoClient;
 use App\Entity\Bike;
 use App\Entity\BikeEvent;
 use App\Entity\BikeRawStatus;

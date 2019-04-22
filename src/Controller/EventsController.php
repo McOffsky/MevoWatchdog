@@ -50,7 +50,7 @@ class EventsController extends BaseController
     }
 
     /**
-     * @Route("/event_map_data.js", name="event_map_data")
+     * @Route("/event_map_data.json", name="event_map_data")
      */
     public function eventPoints(Request $request)
     {

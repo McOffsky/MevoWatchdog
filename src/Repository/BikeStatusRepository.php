@@ -80,34 +80,6 @@ class BikeStatusRepository extends ServiceEntityRepository
      * @param int $timespan
      * @return array
      */
-    public function getBikeLocationHistory($code, $timespan)
-    {
-        $statusQB = $this->createQueryBuilder('bs')
-            ->andWhere('bs.locationChange = :true')
-            ->andWhere('bs.timestamp > :from')
-            ->andWhere('bs.timestamp < :to')
-            ->andWhere('bs.bikeCode = :code')
-            ->setParameter('from', $this->getTime("-".$timespan."hours"))
-            ->setParameter('to', $this->getTime("now"))
-            ->setParameter('code', $code)
-            ->setParameter('true', true)
-            ->addOrderBy("bs.timestamp", "DESC")
-        ;
-
-        $locations = [];
-
-        foreach($statusQB->getQuery()->getResult() as $status) {
-            $locations[] = $status->getLoc();
-        }
-
-        return $locations;
-    }
-
-    /**
-     * @param string $code
-     * @param int $timespan
-     * @return array
-     */
     public function getBikePointsHistory($code, $timespan)
     {
         $statusQB = $this->createQueryBuilder('bs')

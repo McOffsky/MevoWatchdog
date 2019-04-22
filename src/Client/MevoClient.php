@@ -1,6 +1,6 @@
 <?php
 
-namespace App\API;
+namespace App\Client;
 
 use App\Entity\BikeRawStatus;
 use App\Entity\RawStation;

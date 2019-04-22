@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Client\GdzieJestMevoClient;
 use App\Command\FetchCommand;
 use App\Entity\Bike;
 use App\Entity\BikeEvent;
@@ -13,6 +14,7 @@ use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
 use App\Repository\StationRepository;
 use App\Repository\SystemVariableRepository;
+use App\Request\OSRMPathRequest;
 use DateTime;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +22,18 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class StationsController extends BaseController
 {
+    /** @var GdzieJestMevoClient */
+    protected $gmjClient;
+
+    /**
+     * BikeController constructor.
+     * @param GdzieJestMevoClient $gmjClient
+     */
+    public function __construct(GdzieJestMevoClient $gmjClient)
+    {
+        $this->gmjClient = $gmjClient;
+    }
+
     /**
      * @Route("/stacje", name="stations_map_view")
      */
@@ -57,7 +71,7 @@ class StationsController extends BaseController
     }
 
     /**
-     * @Route("/stations_map_data.js", name="stations_map_data")
+     * @Route("/stations_map_data.json", name="stations_map_data")
      */
     public function stationMapPoints(Request $request)
     {
@@ -114,9 +128,7 @@ class StationsController extends BaseController
         $context = [
             "station" => $station,
             "bikes" => $statusRepo->getBikesByLocation($timespan, $station->getLocation()),
-            "bikesSummary" => $statusRepo->getLocationSummary($station->getLocation(), $timespan),
             "events" => $eventRepo->getLocationEvents($station->getLocation(), $timespan),
-            "connections" => $statusRepo->getLocationConnections($station->getLocation(), $timespan),
             "lastUpdate" => $lastUpdateTimestamp->getValue(),
             "timespan" => $timespan
         ];
@@ -125,5 +137,63 @@ class StationsController extends BaseController
         $response->setSharedMaxAge(60);
 
         return $response;
+    }
+
+    /**
+     * @Route("/stacja/{code}/data.json", name="station_data_view")
+     */
+    public function stationData(Request $request, $code)
+    {
+        /** @var BikeStatusRepository $statusRepo */
+        $statusRepo = $this->getDoctrine()->getRepository(BikeStatus::class);
+
+        /** @var StationRepository $stationRepo */
+        $stationRepo = $this->getDoctrine()->getRepository(Station::class);
+
+        $timespan = $request->query->get("h", 24);
+
+        /** @var Station $station */
+        $station = $stationRepo->findOneBy(["code" => $code]);
+
+        /** @var SystemVariableRepository $sysVarRepo */
+        $sysVarRepo = $this->getDoctrine()->getRepository(SystemVariable::class);
+        $lastUpdateTimestamp = $sysVarRepo->findOneBy(['name' => FetchCommand::UPDATE_TIMESTAMP_NAME]);
+        $expireDatetime = new DateTime('@' . (intval($lastUpdateTimestamp->getValue()) + 60));
+
+        $connections = $statusRepo->getLocationConnections($station->getLocation(), $timespan);
+
+        $context = [
+            "bikesSummary" => $statusRepo->getLocationSummary($station->getLocation(), $timespan),
+            "connections" => $this->addPaths($station, $connections),
+            "timespan" => $timespan
+        ];
+
+        $response = new JsonResponse($context);
+        $response->setExpires($expireDatetime);
+        $response->setSharedMaxAge(60);
+        $response->setVary(["Accept-Encoding"]);
+
+        return $response;
+    }
+
+    /**
+     * @param Station $station
+     * @param array $connections
+     * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    private function addPaths(Station $station, array $connections)
+    {
+        $points = [];
+
+        foreach($connections as $point) {
+            $pathRequest = new OSRMPathRequest($station->getLoc(), $point['loc']);
+
+            $point['route'] = $this->gmjClient->fetchPath($pathRequest);
+            $points[] = $point;
+        }
+
+        return $points;
     }
 }
