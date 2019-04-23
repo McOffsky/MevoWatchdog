@@ -132,7 +132,7 @@
                     features: points
                 }),
                 style: function(feature) {
-                    let size = 6 + (feature.get("bike_count")/2);
+                    let size = 5 + (feature.get("bike_count")/2);
                     let fill = new ol.style.Fill({color: '#384977'});
 
                     if (feature.get("bike_count") < 1) {
@@ -140,7 +140,7 @@
                     }
 
                     if (size > 40) {
-                        size = 45;
+                        size = 40;
                     }
 
                     return [new ol.style.Style({
@@ -169,11 +169,14 @@
                 view: new ol.View({
                     {% if city is empty %}
                         center: ol.proj.fromLonLat([18.585843, 54.380577]),
-                        zoom: 9.5
+                        zoom: 9.5,
                     {% else %}
                         center: ol.proj.fromLonLat(data.points[0] ? data.points[0].loc : [18.585843, 54.380577]),
-                        zoom: data.points[0] ? 11.75 : 9.5
+                        zoom: (data.points[0] ? 11.75 : 9.5),
                     {% endif %}
+
+                    minZoom: 8,
+                    maxZoom: 16,
                 })
             });
 

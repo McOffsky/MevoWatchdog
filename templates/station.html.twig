@@ -209,17 +209,13 @@
                 if (departureCount > 0 && arrivalCount > 0) {
                     pointType = "mixed";
                 }
-
-                var path = new ol.format.Polyline({
-                    factor: 1e5
-                }).readGeometry(value.route.routes[0].geometry, {
-                    dataProjection: 'EPSG:4326',
-                    featureProjection: 'EPSG:3857'
-                });
+                var path = new ol.geom.LineString([value.loc, {{ station.loc|json_encode|raw }}]);
+                path.transform('EPSG:4326', 'EPSG:3857');
 
                 paths.push(new ol.Feature({
                     geometry: path,
-                    type: 'route',
+                    name: "Line",
+                    path_type: pointType,
                 }));
 
                 mapPoints.push(new ol.Feature({
@@ -227,19 +223,96 @@
                     label: pointLabel.join("<br/>"),
                     point_size: value.bikes.length,
                     point_type: pointType,
+                    route: value.route.routes[0]
                 }));
             });
 
-            var pathLayer = new ol.layer.Vector({
+            var routeLayer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: []
+                }),
+                style: function(feature) {
+                    let styles = [];
+                    switch (feature.get("path_type")) {
+                        case "arr":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#384977",
+                                })
+                            }));
+                            break;
+                        case "dep":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#EA5144",
+                                })
+                            }));
+                            break;
+                        case "mixed":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#384977",
+                                })
+                            }));
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#EA5144",
+                                    lineDash: [10, 10]
+                                })
+                            }));
+                            break;
+                    }
+                    return styles;
+                },
+            });
+
+            routeLayer.setVisible(false);
+
+            var pathsLayer = new ol.layer.Vector({
                 source: new ol.source.Vector({
                     features: paths
                 }),
-                style: new ol.style.Style({
-                    stroke: new ol.style.Stroke({
-                        width: 3,
-                        color: "#5B6A9B",
-                    })
-                })
+                style: function(feature) {
+                    let styles = [];
+                    switch (feature.get("path_type")) {
+                        case "arr":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#384977",
+                                })
+                            }));
+                            break;
+                        case "dep":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#EA5144",
+                                })
+                            }));
+                            break;
+                        case "mixed":
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#384977",
+                                })
+                            }));
+                            styles.push(new ol.style.Style({
+                                stroke: new ol.style.Stroke({
+                                    width: 3,
+                                    color: "#EA5144",
+                                    lineDash: [10, 10]
+                                })
+                            }));
+                            break;
+                    }
+                    return styles;
+                }
             });
 
             let mapPointsLayer = new ol.layer.Vector({
@@ -247,48 +320,18 @@
                     features: mapPoints
                 }),
                 style: function(feature) {
-                    let size = 6 + feature.get("point_size");
-                    let styles = [];
-
-                    if (size > 45) {
-                        size = 45;
+                    let size = 5 + feature.get("point_size");
+                    if (size > 40) {
+                        size = 40;
                     }
-
-                    switch (feature.get("point_type")) {
-                        case "arr":
-                            styles.push(new ol.style.Style({
-                                image: new ol.style.RegularShape({
-                                    fill: new ol.style.Fill({color: '#fff'}),
-                                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                                    points: 20,
-                                    radius: size,
-                                })
-                            }));
-                            break;
-                        case "dep":
-                            // styles.push(new ol.style.Style({
-                            //     image: new ol.style.RegularShape({
-                            //         fill: new ol.style.Fill({color: '#384977'}),
-                            //         stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                            //         points: 4,
-                            //         radius: size+2,
-                            //         rotation: Math.PI/4,
-                            //     })
-                            // }));
-                            // break;
-                        case "mixed":
-                            styles.push(new ol.style.Style({
-                                image: new ol.style.RegularShape({
-                                    fill: new ol.style.Fill({color: '#384977'}),
-                                    stroke: new ol.style.Stroke({color: 'black', width: 1}),
-                                    points: 20,
-                                    radius: size,
-                                })
-                            }));
-                            break;
-                    }
-
-                    return styles;
+                    return new ol.style.Style({
+                        image: new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: '#BFE3F0'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 1}),
+                            points: 20,
+                            radius: size,
+                        })
+                    })
                 }
             });
 
@@ -317,10 +360,10 @@
                 }),
                 style: new ol.style.Style({
                     image: new ol.style.RegularShape({
-                        fill: new ol.style.Fill({color: '#EA5144'}),
-                        stroke: new ol.style.Stroke({color: 'black', width: 2}),
+                        fill: new ol.style.Fill({color: '#384977'}),
+                        stroke: new ol.style.Stroke({color: 'black', width: 1}),
                         points: 20,
-                        radius: 15,
+                        radius: 10,
                     })
                 })
             });
@@ -334,14 +377,17 @@
                             crossOrigin: null
                         })
                     }),
-                    pathLayer,
+                    pathsLayer,
+                    routeLayer,
                     mapPointsLayer,
                     markerLayer
                 ],
 
                 view: new ol.View({
                     center: ol.proj.fromLonLat({{ station.loc|json_encode|raw }}),
-                    zoom: 13
+                    zoom: 13,
+                    minZoom: 8,
+                    maxZoom: 16,
                 })
             });
 
@@ -375,6 +421,29 @@
                     $(element).popover('show');
                 } else {
                     $(element).popover('hide');
+                }
+
+
+                if (feature && feature.get('route')) {
+                    var path = new ol.format.Polyline({
+                        factor: 1e5
+                    }).readGeometry(feature.get('route').geometry, {
+                        dataProjection: 'EPSG:4326',
+                        featureProjection: 'EPSG:3857'
+                    });
+
+                    routeLayer.getSource().clear();
+                    routeLayer.getSource().addFeature(new ol.Feature({
+                        geometry: path,
+                        type: 'route',
+                        path_type: feature.get('point_type'),
+                    }));
+
+                    pathsLayer.setVisible(false);
+                    routeLayer.setVisible(true);
+                } else {
+                    pathsLayer.setVisible(true);
+                    routeLayer.setVisible(false);
                 }
             });
         });

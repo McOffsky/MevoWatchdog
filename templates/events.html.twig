@@ -227,11 +227,14 @@
                 view: new ol.View({
                     {% if city is empty %}
                         center: ol.proj.fromLonLat([18.585843, 54.380577]),
-                        zoom: 9.5
+                        zoom: 9.5,
                     {% else %}
                         center: ol.proj.fromLonLat(data.points[0] ? data.points[0].loc : [18.585843, 54.380577]),
-                        zoom: data.points[0] ? 11.75 : 9.5
+                        zoom: data.points[0] ? 11.75 : 9.5,
                     {% endif %}
+
+                    minZoom: 8,
+                    maxZoom: 16,
                 })
             });
 

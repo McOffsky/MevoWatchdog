@@ -259,7 +259,7 @@
                                 fill: new ol.style.Fill({color: 'green'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 10,
+                                radius: 8,
                             })
                             break;
                         case "low_battery":
@@ -267,7 +267,7 @@
                                 fill: new ol.style.Fill({color: 'yellow'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 10,
+                                radius: 8,
                             })
                             break;
                         case "depleted_battery":
@@ -275,7 +275,7 @@
                                 fill: new ol.style.Fill({color: 'red'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 4,
-                                radius: 10,
+                                radius: 8,
                             })
                             break;
                         case "location":
@@ -283,7 +283,7 @@
                                 fill: new ol.style.Fill({color: '#BFE3F0'}),
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 20,
-                                radius: 8,
+                                radius: 6,
                             })
                             break;
                         case "current":
@@ -305,7 +305,7 @@
                                 fill: fill,
                                 stroke: new ol.style.Stroke({color: 'black', width: 1}),
                                 points: 20,
-                                radius: 12,
+                                radius: 10,
                             })
 
                             break;
@@ -360,7 +360,9 @@
                 ],
                 view: new ol.View({
                     center: ol.proj.fromLonLat({{ bike.loc|json_encode|raw }}),
-                    zoom: 11
+                    zoom: 11,
+                    minZoom: 8,
+                    maxZoom: 16,
                 })
             });
 
