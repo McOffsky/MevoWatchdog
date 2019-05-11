@@ -64,7 +64,7 @@ class MevoClient
 
         foreach ($stations[0]->places as $station) {
             if (!$station->bike && $station->spot) {
-                $stationsInSystem[$station->name] = $this->readStation($station);
+                $stationsInSystem[$station->number] = $this->readStation($station);
             }
 
             if (!empty($station->bike_list)) {
@@ -104,7 +104,7 @@ class MevoClient
 
         foreach ($stations[0]->places as $station) {
             if (!$station->bike && $station->spot) {
-                $stationsInSystem[$station->name] = $this->readStation($station);
+                $stationsInSystem[$station->number] = $this->readStation($station);
             }
         }
 
@@ -119,7 +119,7 @@ class MevoClient
     {
         $stationStatus = new RawStation();
         $stationStatus->setUid($station->uid);
-        $stationStatus->setCode($station->name);
+        $stationStatus->setCode($station->number);
         $stationStatus->setLat($station->lat);
         $stationStatus->setLng($station->lng);
         $stationStatus->setCity($station->city);
