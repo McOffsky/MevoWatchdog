@@ -65,7 +65,7 @@
                         </tr>
                         {% if city is empty %}
                             <tr>
-                                <td>Deklarowana liczba dostępnych rowerów:</td>
+                                <td>Deklarowana liczba dostępnych rowerów:<br/></td>
                                 <td style="width: 25%; text-align: left;"><strong>{{ bikeDeclaration }}</strong></td>
                             </tr>
                             <tr>
@@ -77,7 +77,7 @@
                         {% endif %}
                         <tr>
                             <td>Liczba zmian lokacji rowerów z ostatnich {{ timespan }}h: <br/>
-                            <i>(wypożyczenie lub przestawienie przez serwis)</i></td>
+                            <i><small>(wypożyczenie lub przestawienie przez serwis)</small></i></td>
                             <td style="width: 25%; text-align: left;"><strong>{{ locationChangeCount }}</strong></td>
                         </tr>
                         <tr>
@@ -248,10 +248,7 @@
                     scales: {
                         yAxes: [{
                             ticks: {
-                                beginAtZero: true,
-                                {% if city is empty %}
-                                max: {{ bikeDeclaration }}
-                                {% endif %}
+                                beginAtZero: true
                             }
                         }]
                     },
@@ -276,10 +273,7 @@
                     scales: {
                         yAxes: [{
                             ticks: {
-                                beginAtZero: true,
-                                {% if city is empty %}
-                                max: {{ bikeDeclaration }}
-                                {% endif %}
+                                beginAtZero: true
                             }
                         }]
                     },

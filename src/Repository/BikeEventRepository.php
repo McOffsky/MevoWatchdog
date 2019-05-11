@@ -169,7 +169,7 @@ class BikeEventRepository extends ServiceEntityRepository
             $summary[$weekday->format("d-m-Y")] = $this->countByTypeFromTo($type, $from, $to, $city);
         }
 
-        return $summary;
+        return array_reverse($summary, true);
     }
 
     /**

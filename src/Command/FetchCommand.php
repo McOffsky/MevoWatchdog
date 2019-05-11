@@ -211,12 +211,16 @@ class FetchCommand extends Command
         foreach($rawStations as $code => $rawStation) {
             $station = $stationRepo->findOneBy(["code" => (string) $code]);
 
+            if ($code == 11151 || $code == 11219 || $code == 11159) {
+                dump($station, $rawStation);
+
+            }
+
             if (!empty($station)) {
                 $station->setBikes($rawStation->getBikes());
                 $station->setBookedBikes($rawStation->getBookedBikes());
+                $this->em->persist($station);
             }
-
-            $this->em->persist($station);
         }
     }
 

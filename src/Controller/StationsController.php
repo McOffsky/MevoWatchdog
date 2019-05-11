@@ -16,6 +16,7 @@ use App\Repository\StationRepository;
 use App\Repository\SystemVariableRepository;
 use App\Request\OSRMPathRequest;
 use DateTime;
+use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -25,13 +26,18 @@ class StationsController extends BaseController
     /** @var GdzieJestMevoClient */
     protected $gmjClient;
 
+    /** @var MobileDetector */
+    protected $mobileDetector;
+
     /**
      * BikeController constructor.
      * @param GdzieJestMevoClient $gmjClient
+     * @param MobileDetector $mobileDetector
      */
-    public function __construct(GdzieJestMevoClient $gmjClient)
+    public function __construct(GdzieJestMevoClient $gmjClient, MobileDetector $mobileDetector)
     {
         $this->gmjClient = $gmjClient;
+        $this->mobileDetector = $mobileDetector;
     }
 
     /**
@@ -112,7 +118,8 @@ class StationsController extends BaseController
         /** @var BikeEventRepository $eventRepo */
         $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
 
-        $timespan = $request->query->get("h", 24);
+        $timelimit = $this->mobileDetector->isMobile() ? 12 : 24;
+        $timespan = $request->query->get("h", $timelimit);
 
         if ($redirect = $this->getRedirect($request)) {
             return $redirect;

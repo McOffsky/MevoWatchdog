@@ -11,6 +11,7 @@ use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\BikeStatusRepository;
 use App\Repository\SystemVariableRepository;
+use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -18,6 +19,18 @@ use DateTime;
 
 class IndexController extends BaseController
 {
+    /** @var MobileDetector */
+    protected $mobileDetector;
+
+    /**
+     * BikeController constructor.
+     * @param MobileDetector $mobileDetector
+     */
+    public function __construct(MobileDetector $mobileDetector)
+    {
+        $this->mobileDetector = $mobileDetector;
+    }
+
     /**
     * @Route("/", name="charts_view")
     */
@@ -32,7 +45,9 @@ class IndexController extends BaseController
         /** @var BikeEventRepository $eventRepo */
         $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
 
-        $timespan = $request->query->get("h", 24);
+        $timelimit = $this->mobileDetector->isMobile() ? 12 : 24;
+
+        $timespan = $request->query->get("h", $timelimit);
         $city = $request->query->get("c", null);
 
         if ($redirect = $this->getRedirect($request)) {
@@ -54,7 +69,7 @@ class IndexController extends BaseController
             "knownBikesCount" => $bikeRepo->getKnownBikesCount($city),
             "events2h" => $eventRepo->getEvents(2, $city),
 
-            "bikeDeclaration" => 1224,
+            "bikeDeclaration" => 4080,
             "timespan" => $timespan,
             "lastUpdate" => $lastUpdateTimestamp->getValue(),
             "city" => $city,

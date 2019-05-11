@@ -197,7 +197,7 @@ class BikeStatusRepository extends ServiceEntityRepository
             $summary[$weekday->format("d-m-Y")] = $this->getLocationChangeCount($from, $to, null, $city);
         }
 
-        return $summary;
+        return array_reverse($summary, true);
     }
 
     /**
@@ -218,7 +218,7 @@ class BikeStatusRepository extends ServiceEntityRepository
             $summary[$time->format("H:00-:59 / d-m")] = $this->getLocationChangeCount($from, $to, null, $city);
         }
 
-        return $summary;
+        return array_reverse($summary, true);
     }
 
     /**
@@ -328,8 +328,7 @@ class BikeStatusRepository extends ServiceEntityRepository
             $summary[$time->format("H:00-:59 / d-m")] = $this->getActiveCount($from, $to, $city, self::BATTERY_CUTOFF_LEVEL);
         }
 
-
-        return $summary;
+        return array_reverse($summary, true);
     }
 
     /**
@@ -350,7 +349,7 @@ class BikeStatusRepository extends ServiceEntityRepository
         }
 
 
-        return $summary;
+        return array_reverse($summary, true);
     }
 
     /**

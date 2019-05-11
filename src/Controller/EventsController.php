@@ -10,12 +10,25 @@ use App\Repository\BikeEventRepository;
 use App\Repository\BikeRepository;
 use App\Repository\SystemVariableRepository;
 use DateTime;
+use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
 class EventsController extends BaseController
 {
+    /** @var MobileDetector */
+    protected $mobileDetector;
+
+    /**
+     * BikeController constructor.
+     * @param MobileDetector $mobileDetector
+     */
+    public function __construct(MobileDetector $mobileDetector)
+    {
+        $this->mobileDetector = $mobileDetector;
+    }
+
     /**
      * @Route("/dziennik-zdarzen", name="events_view")
      */
@@ -27,7 +40,9 @@ class EventsController extends BaseController
         /** @var BikeEventRepository $eventRepo */
         $eventRepo = $this->getDoctrine()->getRepository(BikeEvent::class);
 
-        $timespan = $request->query->get("h", 24);
+        $timelimit = $this->mobileDetector->isMobile() ? 12 : 24;
+
+        $timespan = $request->query->get("h", $timelimit);
         $city = $request->query->get("c", null);
         $type = $request->query->get("t", null);
 

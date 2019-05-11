@@ -14,6 +14,7 @@ use App\Repository\BikeStatusRepository;
 use App\Repository\SystemVariableRepository;
 use App\Request\OSRMPathRequest;
 use DateTime;
+use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -23,13 +24,18 @@ class BikeController extends BaseController
     /** @var GdzieJestMevoClient */
     protected $gmjClient;
 
+    /** @var MobileDetector */
+    protected $mobileDetector;
+
     /**
      * BikeController constructor.
      * @param GdzieJestMevoClient $gmjClient
+     * @param MobileDetector $mobileDetector
      */
-    public function __construct(GdzieJestMevoClient $gmjClient)
+    public function __construct(GdzieJestMevoClient $gmjClient, MobileDetector $mobileDetector)
     {
         $this->gmjClient = $gmjClient;
+        $this->mobileDetector = $mobileDetector;
     }
 
     /**
